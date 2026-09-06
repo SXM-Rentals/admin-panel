@@ -1,0 +1,182 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of everything that tells someone the state of
+   things — the small coloured status labels, the "Coming Soon" treatment, the
+   grey blocks shown while information is still loading, the message shown when a
+   list is empty, and the rating stars. */
+
+/* ---- MOCK BANNER ----
+   Says plainly that the site is running on sample data. It stays until there is
+   a real backend, because a demo that looks live is how someone ends up thinking
+   they have booked a car that does not exist. */
+.mockBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid transparent;
+}
+
+/* ---- STATUS PILL ----
+   The small coloured label saying "Upcoming", "Deposit Held", "Paid". */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px var(--space-md);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.pillNeutral { background: var(--tile); color: var(--ink2); }
+.pillSuccess { background: var(--success-soft); color: var(--success); }
+.pillWarning { background: var(--warning-soft); color: var(--warning); }
+.pillDanger  { background: var(--danger-soft);  color: var(--danger); }
+.pillBrand   { background: var(--brand-soft);   color: var(--brand); }
+
+/* A small dot before the wording. Colour alone never carries the meaning — the
+   words always say it too — but the dot helps it read at a glance. */
+.pillDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* ---- COMING SOON ----
+   Greyed out and clearly unavailable, for the vehicle types and the rewards
+   scheme that are not live yet. The point is that they LOOK unavailable — a
+   button that appears normal and does nothing is indistinguishable from one
+   that is broken. */
+.comingSoonBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-pill);
+  background: var(--disabled-surface);
+  color: var(--ink3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.comingSoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-4xl) var(--space-xl);
+  text-align: center;
+  border-radius: var(--radius-lg);
+  background: var(--tile);
+  border: 1px dashed var(--hairline);
+}
+
+.comingSoonIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--disabled-surface);
+  color: var(--ink3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- EMPTY STATE ----
+   Shown when a list has nothing in it. Always says what would appear here and
+   how to make it appear, rather than a bare "No results". */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-5xl) var(--space-xl);
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--tile);
+  color: var(--ink3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-xs);
+}
+
+.emptyBody {
+  max-width: 380px;
+}
+
+/* ---- SKELETON ----
+   The soft grey blocks shown in the shape of what is loading, so the page has
+   its final layout before the information arrives rather than jumping about. */
+.skeleton {
+  background: var(--tile);
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+/* A slow shimmer passing across, which reads as "working on it" rather than
+   "stuck". Switched off automatically for anyone who has asked their computer
+   to reduce motion — that rule lives in globals.css. */
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ---- STARS ---- */
+.starRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--star);
+}
+
+.ratingRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ---- THE SMALLEST LABELS, ON THE SMALLEST SCREENS ----
+   A pill and the Coming Soon badge are 11px, which is fine on a desk and at the
+   edge of legible on a phone in sunlight. These are not decoration: a pill is
+   what says OUT NOW, PENDING, or DELIVERS VEHICLES. One pixel more, on phones
+   only, and nothing else moves.
+
+   They are set in capitals with extra letter-spacing, which already helps at a
+   small size — which is why 12px is enough here rather than the larger bump a
+   run of lowercase text would need. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .pill,
+  .comingSoonBadge {
+    font-size: 12px;
+  }
+}

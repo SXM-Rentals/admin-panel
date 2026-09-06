@@ -1,0 +1,319 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: This is the admin panel's style rulebook. Every colour,
+   spacing size, corner roundness and text size used anywhere in the panel is
+   defined once, right here, as a "CSS variable". No other file is allowed to
+   write a colour directly — they all read from this file. Changing the whole
+   look of the panel is a one-line edit here.
+
+   THE ADMIN PANEL IS DARK ONLY. ON PURPOSE.
+
+   The customer website has both a light and a dark look and a switch between
+   them. This does not. The values below are the website's DARK values, lifted
+   whole and promoted to be the only palette there is — so the two products look
+   like the same company, and staff with both open see one continuous thing.
+
+   That means there is deliberately no light palette in this file, no
+   "prefers-color-scheme" block, no [data-theme] selector, and no toggle in the
+   top bar. If a future change wants a light mode, it is a real piece of work —
+   not a switch someone forgot to wire up. Please do not "restore" one by
+   copying the website's file over this.
+
+   Source of the values: sxm-rentals-web/app/globals.css, dark mode section,
+   which in turn came from the mobile app's lib/theme/tokens.ts. Three copies of
+   one palette, kept identical by hand. */
+
+:root {
+  /* ---- BACKGROUNDS ---- */
+  --ground: #0d0f11;          /* the page behind everything */
+  --card: #16191d;            /* the panels and the big screen card */
+  --tile: #1c2025;            /* table hover, chips, the current sidebar row */
+  --overlay: rgba(0, 0, 0, 0.6); /* dims the screen behind a pop-up */
+
+  /* ---- LINES AND EDGES ---- */
+  --hairline: #2a2f36;        /* the very thin border around cards and inputs */
+
+  /* ---- TEXT ---- */
+  --ink: #f3f5f7;             /* main text, near-white */
+  --ink2: #a2aab5;            /* supporting text, grey */
+  --ink3: #78818d;            /* faint text and placeholder text */
+
+  /* ---- THE MAIN ACTION COLOUR ----
+     NOTE THE FLIP: on a dark page the primary button is near-WHITE with dark
+     text, because a charcoal button on a charcoal page would be invisible. */
+  --primary: #f3f5f7;
+  --primary-text: #0d0f11;    /* text sitting on top of a primary button */
+  --primary-pressed: #d8dde3; /* slightly dimmer while being clicked */
+
+  /* ---- COLOURS THAT CARRY A MEANING ----
+     Used only where they mean something: a verified tick, a warning, a figure
+     that needs attention. Never for decoration. */
+  --star: #ffa726;
+  --brand: #3daeff;           /* links, the current sidebar row, verified marks */
+  --brand-soft: #10293c;      /* the dim blue behind brand-coloured things */
+  --success: #34d399;
+  --success-soft: #0f2e22;
+  --warning: #fbbf24;
+  --warning-soft: #33270a;
+  --danger: #f87171;
+  --danger-soft: #3a1616;
+
+  /* Something switched off or not yet available */
+  --disabled: #4a525c;
+  --disabled-surface: #22272d;
+
+  /* ---- SPACING ----
+     All gaps between things are multiples of 4, so the layout stays even. */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 40px;
+  --space-5xl: 48px;
+
+  /* ---- CORNER ROUNDNESS ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;    /* input boxes */
+  --radius-lg: 14px;    /* cards */
+  --radius-xl: 20px;    /* the big screen card, pop-up sheets */
+  --radius-pill: 999px; /* fully rounded buttons and chips */
+
+  /* ---- STANDARD SIZES ---- */
+  --size-button: 52px;      /* height of a full-width button */
+  --size-button-sm: 36px;   /* height of a small button, e.g. a row action */
+  --size-input: 52px;       /* height of a text box */
+  --size-icon-button: 40px; /* the round icon buttons in the top bar */
+
+  /* ---- LAYOUT ----
+     The two fixed measurements the whole panel is built around. */
+  --admin-sidebar: 248px;
+  --admin-topbar: 72px;
+  --content-max: 1600px;
+
+  /* ---- SHADOWS ----
+     On a dark ground a shadow is part of what separates one dark panel from
+     another, so these are heavier than the website's. */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-floating: 0 6px 16px rgba(0, 0, 0, 0.5);
+
+  /* The system font stack, used for everything you actually read. Nothing is
+     downloaded for it, so text appears instantly and looks native on whichever
+     computer is being used — a Windows desktop or a MacBook. */
+  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-heading-stack: var(--font-heading), var(--font-stack);
+  --font-body-stack: var(--font-heading), var(--font-stack);
+
+  /* Reference numbers and API keys, where the characters need to be
+     distinguishable from one another. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+
+  /* ---- CHART COLOURS ----
+     Deliberately NOT the same blue as --brand. A chart mark and a link are
+     different jobs: a link only has to be noticeable, while a mark has to sit in
+     a readable lightness band against this exact dark surface, hold enough
+     colour to be seen as a fill, and stay apart from its neighbours for somebody
+     with colour-blindness.
+
+     These three were checked rather than chosen by eye — run
+     scripts/validate_palette.js from the dataviz skill with
+     --mode dark --surface "#16191d" and all six checks pass: lightness band,
+     chroma floor, colour-blind separation (worst adjacent pair dE 10.8 deutan),
+     normal-vision separation (18.8), and contrast against the surface.
+
+     If one of these ever needs changing, re-run that check. Do not eyeball it. */
+  --chart-1: #4a90e2;   /* money */
+  --chart-2: #2aa77c;   /* counts — bookings */
+  --chart-3: #c07f10;   /* people — new accounts */
+  --chart-grid: #22272d; /* the faint horizontal rules behind the marks */
+
+  /* Tells the browser its own furniture — scrollbars, dropdown menus, date
+     pickers, the autofill highlight — is dark too. Without this one line the
+     panel is dark but every control the browser draws itself comes out white. */
+  color-scheme: dark;
+}
+
+/* ==================================================================
+   RESET
+   Clears the inconsistent default styling every browser applies, so a
+   page looks the same in Chrome, Edge, Firefox and Safari.
+   ================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body-stack);
+  font-size: 15px;
+  line-height: 22px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure, blockquote { margin: 0; }
+
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+img, svg, video { max-width: 100%; display: block; }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+input, textarea, select, button { font-family: inherit; }
+
+input, textarea, select { font: inherit; color: inherit; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ---- KEYBOARD FOCUS ----
+   A visible ring around whatever the keyboard is currently on. Essential for
+   anyone working down a long table with the Tab key instead of a mouse.
+   ":focus-visible" means it only appears for keyboard users, so clicking with a
+   mouse does not leave rings everywhere. Never replace this with
+   "outline: none". */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Some people set their computer to minimise animation, often because movement
+   makes them unwell. We honour that and switch animation off. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==================================================================
+   TEXT STYLES
+   Instead of every page deciding its own font size, they use one of
+   these named styles. The sizes match the customer website exactly, so
+   the two products read as one type scale.
+   ================================================================== */
+.t-display  { font-family: var(--font-heading-stack); font-size: 38px; line-height: 46px; font-weight: 400; letter-spacing: -0.4px; }
+.t-h1       { font-family: var(--font-heading-stack); font-size: 30px; line-height: 38px; font-weight: 400; letter-spacing: -0.2px; }
+.t-h2       { font-family: var(--font-heading-stack); font-size: 22px; line-height: 30px; font-weight: 400; letter-spacing: 0; }
+.t-h3       { font-family: var(--font-heading-stack); font-size: 18px; line-height: 25px; font-weight: 400; letter-spacing: 0; }
+.t-bodyLg   { font-size: 16px; line-height: 25px; font-weight: 400; }
+.t-body     { font-size: 15px; line-height: 23px; font-weight: 400; }
+.t-label    { font-size: 14px; line-height: 21px; font-weight: 600; }
+.t-small    { font-size: 13px; line-height: 19px; font-weight: 400; }
+.t-caption  { font-size: 11px; line-height: 15px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* ---- TEXT COLOURS ---- */
+.tone-ink       { color: var(--ink); }
+.tone-ink2      { color: var(--ink2); }
+.tone-ink3      { color: var(--ink3); }
+.tone-brand     { color: var(--brand); }
+.tone-danger    { color: var(--danger); }
+.tone-success   { color: var(--success); }
+.tone-warning   { color: var(--warning); }
+.tone-onPrimary { color: var(--primary-text); }
+
+/* ==================================================================
+   SHARED HELPERS
+   ================================================================== */
+
+/* Hides something from the screen but keeps it readable by screen-reader
+   software — used for labels that would be visual clutter but that someone
+   listening to the page still needs. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Money and counts, so figures line up in a column instead of wandering. */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ---- SCROLLBARS INSIDE PANELS ----
+   The browser's own scrollbar is a wide slab sized for scrolling a whole
+   window. Inside a 248px sidebar it eats a chunk of the width and draws more
+   attention than the navigation next to it. This is the same scrollbar, thinner
+   and in the hairline colour, so it reads as part of the panel.
+
+   THE PAGE'S OWN SCROLLBAR IS DELIBERATELY LEFT ALONE. People expect the main
+   window to scroll the way every other window on their computer does. */
+.thinScroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline) transparent;
+}
+
+.thinScroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.thinScroll::-webkit-scrollbar-track { background: transparent; }
+
+.thinScroll::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.thinScroll:hover::-webkit-scrollbar-thumb {
+  background: var(--ink3);
+  background-clip: padding-box;
+}
+
+.thinScroll::-webkit-scrollbar-corner { background: transparent; }
+
+/* ==================================================================
+   PRINTING
+   A staff member printing an audit trail or a booking for a dispute
+   file needs black on white. Printing the dark palette would empty an
+   ink cartridge over one page and come out unreadable, so the colours
+   invert for print only. This is the one exception to "dark only", and
+   it is about paper rather than screens.
+   ================================================================== */
+@media print {
+  :root {
+    --ground: #ffffff;
+    --card: #ffffff;
+    --tile: #ffffff;
+    --ink: #000000;
+    --ink2: #333333;
+    --ink3: #666666;
+    --hairline: #cccccc;
+    --primary: #000000;
+    --primary-text: #ffffff;
+    --shadow-card: none;
+    --shadow-floating: none;
+    color-scheme: light;
+  }
+
+  body { background: #fff; }
+
+  /* Anything marked "do not print" disappears — sidebar, top bar, buttons. */
+  [data-print="hide"] { display: none !important; }
+
+  /* Keep a card or a table row from being split across two pages. */
+  [data-print="keep"] { break-inside: avoid; }
+}

@@ -1,0 +1,119 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the small round buttons that hold a single
+   picture and no words — the back arrow, the close cross, the heart on a car,
+   the theme switch in the top bar. */
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Never smaller than 44px, the smallest target most people can reliably hit.
+     A back arrow that is hard to click is a back arrow that gets missed. */
+  width: var(--size-icon-button);
+  height: var(--size-icon-button);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--ink);
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* No border and no background — for an icon sitting inside something that
+   already has its own edges, like a row in a list. */
+.plain {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Solid dark, for the one main action in a row of icons. */
+.filled {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+/* Sitting on top of a photo, where the page behind could be any colour. */
+.onPhoto {
+  background: var(--card);
+  border-color: transparent;
+  box-shadow: var(--shadow-card);
+}
+
+.sm { width: 34px; height: 34px; }
+.lg { width: 52px; height: 52px; }
+
+/* ---- SMALL BUTTONS ON A TOUCHSCREEN ----
+   The small size is used for the heart on a car photo, among other things. At
+   34px it is a pleasant size to look at and a poor one to hit — and the heart in
+   particular sits in the corner of a photo that is itself a link, so a near miss
+   opens the car instead of saving it. Which is a worse outcome than nothing
+   happening.
+
+   The button still LOOKS 34px. Only the area that responds grows, spilling
+   invisibly past the edge of the circle. That is what ::after does below: an
+   invisible layer, centred on the button, sized to a thumb. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .sm {
+    position: relative;
+  }
+
+  .sm::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--size-touch-min);
+    height: var(--size-touch-min);
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (hover: hover) {
+  .iconButton:hover:not(:disabled) {
+    background: var(--tile);
+    border-color: var(--ink3);
+  }
+
+  .filled:hover:not(:disabled) {
+    background: var(--primary-pressed);
+    border-color: var(--primary-pressed);
+  }
+}
+
+.iconButton:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.iconButton:disabled {
+  color: var(--ink3);
+  background: var(--disabled-surface);
+  border-color: var(--disabled-surface);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Marks the button as switched on — the heart on a saved car, for instance. */
+.active {
+  color: var(--danger);
+}
+
+/* A small coloured dot in the corner, used on the bell to show there is
+   something unread. */
+.badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--brand);
+  /* A ring in the page colour so the dot reads clearly against the icon. */
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+.wrapper {
+  position: relative;
+  display: inline-flex;
+}

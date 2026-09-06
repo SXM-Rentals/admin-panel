@@ -1,0 +1,54 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the small messages that appear briefly at the
+   bottom of the screen — "Cars are the only type available right now", "Copied",
+   "Saved to your list". */
+
+.stack {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-2xl);
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: min(440px, calc(100vw - var(--space-3xl)));
+  /* Clicks pass straight through the empty space around the messages, so a
+     message never blocks a button underneath it. */
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-text);
+  box-shadow: var(--shadow-floating);
+  pointer-events: auto;
+  animation: riseIn 0.2s ease;
+}
+
+.body { flex: 1; min-width: 0; }
+
+.title { font-weight: 700; font-size: 14px; line-height: 20px; }
+.message { font-size: 13px; line-height: 18px; opacity: 0.85; }
+
+.close {
+  color: inherit;
+  opacity: 0.7;
+  display: flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.close:hover { opacity: 1; }
+
+@keyframes riseIn {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

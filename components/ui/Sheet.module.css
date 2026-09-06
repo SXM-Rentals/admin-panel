@@ -1,0 +1,131 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the panels that open on top of the page — the
+   filter panel, the language picker, and the small yes/no confirmation boxes. */
+
+/* The dimmed layer covering the page behind. Clicking it closes the panel. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  z-index: 100;
+  padding: var(--space-lg);
+  /* On a phone the panel sits at the bottom, the way it does in the mobile app.
+     On anything larger it is centred, which is what people expect from a
+     window on a computer. */
+  align-items: flex-end;
+  justify-content: center;
+  animation: fade 0.15s ease;
+}
+
+@media (min-width: 768px) {
+  .backdrop {
+    align-items: center;
+    padding: var(--space-3xl);
+  }
+}
+
+/* A panel that slides in from the side instead — used for filters on a narrow
+   window, where a tall list of options needs the full height. */
+.backdropSide {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 520px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-floating);
+  animation: riseUp 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .panel { animation: fade 0.15s ease; }
+}
+
+.panelWide { max-width: 760px; }
+
+.panelSide {
+  max-width: var(--sidebar-width);
+  height: 100%;
+  border-radius: 0;
+  border-left: none;
+  border-top: none;
+  border-bottom: none;
+  animation: slideIn 0.2s ease;
+}
+
+/* A small confirmation box is narrower — a wide box for one short question
+   looks like something went wrong. */
+.panelDialog { max-width: 420px; }
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xl) var(--space-xl) var(--space-md);
+  flex-shrink: 0;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The scrolling middle. Only this part scrolls, so the heading and the buttons
+   stay put while a long list of filters moves underneath them. */
+.body {
+  padding: 0 var(--space-xl) var(--space-xl);
+  overflow-y: auto;
+  flex: 1;
+  /* Stops a scroll inside the panel from carrying on and scrolling the page
+     behind it once the list reaches its end. */
+  overscroll-behavior: contain;
+}
+
+.footer {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl) var(--space-xl);
+  border-top: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+
+.footer > * { flex: 1; }
+
+/* The small bar at the top of a panel on a phone, showing it can be dragged. */
+.grabber {
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--hairline);
+  margin: var(--space-md) auto 0;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .grabber { display: none; }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes riseUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}

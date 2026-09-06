@@ -1,0 +1,46 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the message shown when something failed to
+   load, together with the button to try again. */
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-4xl) var(--space-xl);
+  text-align: center;
+}
+
+.icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.body { max-width: 400px; }
+
+/* The compact version, for a failure inside one card rather than a whole page. */
+.inline {
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+}
+
+.inline .icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: transparent;
+}
+
+.inlineBody { flex: 1; min-width: 0; }

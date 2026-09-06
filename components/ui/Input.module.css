@@ -1,0 +1,123 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of every box people type into — text boxes,
+   password boxes, and the larger boxes for a paragraph of writing. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  /* Stops a long box from forcing the whole page wider than the screen. */
+  min-width: 0;
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+/* ---- THE BOX ITSELF ---- */
+.box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--size-input);
+  padding-inline: var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  transition: border-color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .box:hover:not(.errorBox):not(.disabledBox) {
+    border-color: var(--ink3);
+  }
+}
+
+/* While someone is typing, the outline darkens so it is obvious which box the
+   keyboard is pointed at. */
+.box:focus-within {
+  border-color: var(--ink);
+}
+
+/* The outline goes red when the entry is not valid. Colour alone is never the
+   only signal — there is always a written message underneath as well, because
+   a red border means nothing to someone who cannot distinguish the colour. */
+.errorBox,
+.errorBox:focus-within {
+  border-color: var(--danger);
+}
+
+.disabledBox {
+  background: var(--disabled-surface);
+  border-color: var(--disabled-surface);
+}
+
+/* The actual typing area. Its own border and background are removed because the
+   box around it provides both. */
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 22px;
+  padding-block: var(--space-md);
+}
+
+.input::placeholder {
+  color: var(--ink3);
+}
+
+/* The focus ring belongs on the box, not on the text inside it, otherwise a
+   rectangle appears within a rectangle. */
+.box:focus-within {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.input:focus-visible {
+  outline: none;
+}
+
+/* Removes the browser's own clear button and password reveal in Edge and
+   Safari, which would sit alongside our own and look like a mistake. */
+.input::-ms-reveal,
+.input::-ms-clear,
+.input::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* ---- THE LARGER BOX FOR A PARAGRAPH ---- */
+.textareaBox {
+  align-items: flex-start;
+  padding-block: var(--space-md);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 96px;
+  font-family: inherit;
+  padding-block: 0;
+}
+
+.icon {
+  color: var(--ink3);
+  display: flex;
+}
+
+/* The message underneath. */
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.counter {
+  margin-left: auto;
+}

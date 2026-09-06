@@ -1,0 +1,76 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the white panels that hold most of the
+   site's content, the small headings that sit above a group of them, and the
+   thin lines used to separate one row from the next. */
+
+/* A white panel with a hairline border. The design leans on thin borders rather
+   than heavy shadows, so the shadow here is barely there. */
+.card {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.padded { padding: var(--space-xl); }
+.flush { padding: 0; }
+
+/* A card that is itself clickable — a car in a list, a booking in a list. */
+.interactive {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+@media (hover: hover) {
+  .interactive:hover {
+    border-color: var(--ink3);
+    box-shadow: var(--shadow-card);
+  }
+}
+
+.interactive:active {
+  transform: translateY(1px);
+}
+
+/* ---- SECTION HEADER ----
+   The small heading above a group of things, often with a "See All" link on the
+   right-hand side. */
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.sectionHeaderText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionAction {
+  color: var(--brand);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+}
+
+@media (hover: hover) {
+  .sectionAction:hover { text-decoration: underline; }
+}
+
+/* ---- DIVIDER ----
+   The thin line between one row and the next. Drawn as a border rather than a
+   filled block so it stays exactly one pixel on high-resolution screens. */
+.divider {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  margin: 0;
+}

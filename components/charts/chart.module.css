@@ -1,0 +1,198 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the charts — the frame around one, the
+   hover tooltip, and the table that can be shown instead of the picture. */
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.frameHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.frameTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* ---- THE "SHOW AS TABLE" SWITCH ----
+   Every chart in the panel can be read as a table instead. This is not a
+   nice-to-have: a picture of a trend is unreadable to somebody using a screen
+   reader, and it is also the wrong shape for somebody who wants to copy three
+   figures into an email. The same numbers, two ways round. */
+.tableToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px var(--space-md);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline);
+  color: var(--ink2);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.tableToggle:hover {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+.plot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+/* The faint horizontal rules behind the marks. Recessive on purpose — they are
+   there to be measured against, not to be looked at. */
+.gridLine {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.axisLabel {
+  fill: var(--ink3);
+  font-size: 11px;
+  font-family: var(--font-stack);
+}
+
+/* A bar. The rounded end is at the top only: the bottom is anchored to the
+   baseline and rounding it would lift the mark off its own axis. */
+.bar {
+  transition: opacity 0.12s ease;
+}
+
+.barDim {
+  opacity: 0.4;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The vertical rule that follows the pointer along a line chart. */
+.crosshair {
+  stroke: var(--ink3);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/* The dot on the line under the pointer. A 2px ring in the surface colour so it
+   reads as sitting on top of the line rather than being a kink in it. */
+.marker {
+  stroke: var(--card);
+  stroke-width: 2;
+}
+
+/* Invisible full-height strips, one per data point, so the hover target is the
+   width of the column rather than the width of the mark. Hovering a 6px-tall bar
+   at the start of a quiet week should not require aiming. */
+.hitArea {
+  fill: transparent;
+  cursor: pointer;
+}
+
+/* ---- THE TOOLTIP ---- */
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--ground);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating);
+  padding: var(--space-sm) var(--space-md);
+  min-width: 140px;
+  z-index: 5;
+  /* Sits above the point rather than under the pointer, so it never covers the
+     mark being asked about. */
+  transform: translate(-50%, -100%);
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ---- THE TABLE VIEW ----
+   The same numbers as the chart, for a screen reader and for anybody who wants
+   to copy three figures into an email.
+
+   IT IS CAPPED RATHER THAN FULL WIDTH. Two columns stretched across a thousand
+   pixels puts "Sep 25" at one edge and "$1,210" at the other with a hand-span of
+   nothing between them, and the eye loses the row on the way across. Capped, the
+   pair reads as one line. The rest of the card is left empty on purpose — empty
+   space is cheaper than a row nobody can track.
+
+   Everything else here matches components/tables/table.module.css: the same row
+   height, the same hairline between rows, the same hover, the same uppercase
+   column heading. It is a table in the same panel and should not look like it
+   came from somewhere else. */
+.dataTable {
+  width: 100%;
+  max-width: 560px;
+  border-collapse: collapse;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dataTable th:first-child,
+.dataTable td:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+.dataTable th:last-child,
+.dataTable td:last-child {
+  padding-right: 0;
+}
+
+.dataTable th {
+  color: var(--ink3);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+.dataTable tbody tr:hover {
+  background: var(--tile);
+}
+
+.dataTable tbody tr:last-child td {
+  border-bottom: none;
+}

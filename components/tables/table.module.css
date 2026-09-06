@@ -1,0 +1,279 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of every list in the panel — the column
+   headings, the rows, the small buttons at the end of a row, and the paging
+   controls along the bottom.
+
+   IT IS A REAL TABLE, not a grid of boxes dressed as one. That matters for more
+   than tidiness: a screen reader announces which column a figure belongs to only
+   if the mark-up actually says so. "Verified" on its own is not information;
+   "Status: Verified" is. */
+
+.wrap {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline) transparent;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  /* Below this the columns start colliding. The card scrolls sideways inside
+     itself rather than letting the page scroll, which is the one thing a layout
+     must never do. */
+  min-width: 860px;
+}
+
+.table th {
+  text-align: left;
+  /* 16px between columns rather than 24px. On a 1366px laptop the seven columns
+     of the vehicles table wanted 1162px inside a 1070px card, so 94px of it —
+     the actions column, with the only buttons on the screen — was scrolled out
+     of sight. Seven columns at 24px a side spend 336px on padding alone; at 16px
+     they spend 224px, and the table fits. The outer edges stay at 24px below, so
+     the first column still lines up with the card title above it. */
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--ink3);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--card);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* A column you can sort by. The whole heading is the button, so the target is
+   the width of the column rather than the width of the word. */
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.sortButton:hover {
+  color: var(--ink);
+}
+
+.sortActive {
+  color: var(--brand);
+}
+
+.table td {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--tile);
+}
+
+/* The outer edges keep the card's own padding, so the first column lines up with
+   the card title and the filter chips above it. */
+.table th:first-child,
+.table td:first-child {
+  padding-left: var(--space-2xl);
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: var(--space-2xl);
+}
+
+/* ---- THE ACTIONS COLUMN IS PINNED TO THE RIGHT ----
+   Trimming the padding above makes the common case fit, but it does not make it
+   impossible for a table to be wider than its card — a narrower window, a longer
+   business name, another column later. And the column that falls off the right
+   edge is always the last one, which is where the buttons are.
+
+   Pinning it means the row's actions are reachable at any width, without
+   scrolling sideways to find them. It needs its own background, or the cells
+   scrolling underneath show through it. */
+.table th:last-child,
+.table td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--card);
+}
+
+/* The pinned cell has to repaint the hover colour itself — it sits above the row
+   rather than inside it as far as painting is concerned. */
+.table tbody tr:hover td:last-child {
+  background: var(--tile);
+}
+
+/* A hairline down the left of the pinned column, shown only while there is
+   something hidden underneath it, so it reads as an edge rather than as a
+   permanent border in the middle of the table. */
+.wrap[data-scrollable='true'] .table th:last-child,
+.wrap[data-scrollable='true'] .table td:last-child {
+  box-shadow: -1px 0 0 var(--hairline);
+}
+
+/* A row for something that has been closed or cancelled. Dimmed, but still
+   readable and still clickable — it is dimmed because it is over, not because it
+   is unimportant. The audit log points at these. */
+.rowMuted td {
+  opacity: 0.55;
+}
+
+/* ---- TWO-LINE CELLS ----
+   Several columns carry a main value with a quieter line under it: a customer
+   and their email, a vehicle and its reference, an amount and the commission
+   inside it. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  /* A CEILING, NOT A WIDTH. The lines inside do not wrap (see below), so without
+     a cap the column simply grows to fit the longest string in it — on the
+     disputes table that made two columns 374px and 344px wide and pushed 266px
+     of the table off the right-hand edge. Capped, the long ones truncate with an
+     ellipsis and the table fits the card.
+
+     195px is roughly thirty-two characters, which is a whole dispute subject or a
+     customer name and the business beside it. Anything longer was going to be
+     read on the detail screen anyway. */
+  max-width: 195px;
+}
+
+/* Neither line wraps. A phone number breaking across two lines made every row in
+   the users list a line taller than it needed to be, for no gain — and a row
+   height that changes with the content makes a long list feel ragged. Anything
+   genuinely too long for its column is cut with an ellipsis instead, which reads
+   as "there is more" rather than as a second line of something else. */
+.stack > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Money and counts. Right-aligned and tabular so the digits line up in a
+   column, which is the only way a column of figures can be scanned. */
+.numeric {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The Modify / View buttons at the end of a row. */
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  white-space: nowrap;
+}
+
+/* ==================================================================
+   PAGING
+   The bar along the bottom: how many per page, where you are, and the
+   two arrows.
+   ================================================================== */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2xl);
+  padding: var(--space-lg) var(--space-2xl) var(--space-sm);
+}
+
+.perPage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.perPageSelect {
+  background: var(--tile);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 13px;
+  padding: 6px var(--space-sm);
+  cursor: pointer;
+}
+
+.pageInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.pageArrows {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink2);
+  border: 1px solid var(--hairline);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.arrow:hover:not(:disabled) {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+/* Greyed rather than hidden. An arrow that disappears at the end of the list
+   makes the row jump about as you page through it. */
+.arrow:disabled {
+  color: var(--disabled);
+  cursor: default;
+  border-color: var(--disabled-surface);
+}
+
+/* ==================================================================
+   EMPTY AND LOADING
+   ================================================================== */
+.empty {
+  padding: var(--space-5xl) var(--space-2xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.loadingRows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-lg) var(--space-2xl);
+}
+
+.loadingRow {
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: var(--tile);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}

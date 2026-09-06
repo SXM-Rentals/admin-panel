@@ -1,0 +1,87 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the stand-in blocks used wherever a real
+   photograph will eventually go, and of the round initials shown in place of a
+   profile picture. */
+
+/* ---- PHOTO PLACEHOLDER ----
+   There are no car photographs yet, so every car shows a soft grey block with a
+   car outline in it. Drawing a deliberate placeholder is much better than
+   leaving a gap or a broken-image icon: the page keeps its real proportions, so
+   nothing shifts around later when actual photographs are added. */
+.photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  background: var(--tile);
+  color: var(--ink3);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  /* Keeps a fixed shape whatever the width, which is what stops the page
+     jumping about as things load. */
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  position: relative;
+}
+
+.wide { aspect-ratio: 16 / 9; }
+.square { aspect-ratio: 1 / 1; }
+.tall { aspect-ratio: 3 / 4; }
+/* For a gallery panel that has to fill a height decided by its container. */
+.fill { aspect-ratio: auto; height: 100%; }
+
+/* A faint diagonal weave, so the block reads as "a picture goes here" rather
+   than as an empty box that failed to load. */
+.photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(128, 128, 128, 0.05) 10px,
+    rgba(128, 128, 128, 0.05) 20px
+  );
+}
+
+.photoInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: var(--space-md);
+}
+
+/* ---- AVATAR ----
+   A circle with someone's initials. The site does not carry photographs of
+   people, and initials are friendlier than a generic silhouette. */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--tile);
+  color: var(--ink2);
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+  user-select: none;
+}
+
+.avatarBrand {
+  background: var(--brand-soft);
+  color: var(--brand);
+  border-color: transparent;
+}
+
+.avatarPrimary {
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: transparent;
+}

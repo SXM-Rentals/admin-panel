@@ -1,0 +1,435 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the frame every screen sits inside — the
+   sidebar down the left, the bar across the top, and the large card the actual
+   content goes in.
+
+   THIS IS A DESKTOP TOOL AND THE LAYOUT SAYS SO. There are no phone
+   breakpoints here, no hamburger menu, and no collapsing sidebar. Staff use this
+   on a Windows desktop or a MacBook, and the admin doc is explicit that there is
+   no mobile requirement. Building responsive versions of sixteen dense table
+   screens for a device nobody will use them on would be a large amount of work
+   spent on nothing. Below 1024px the panel shows a single line explaining that
+   instead — see .narrowNotice at the bottom. */
+
+.layout {
+  display: grid;
+  grid-template-columns: var(--admin-sidebar) minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ==================================================================
+   THE SIDEBAR
+   ================================================================== */
+.sidebar {
+  background: var(--card);
+  border-right: 1px solid var(--hairline);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg) var(--space-md) var(--space-md);
+  /* Sixteen rows and a sign-out is more than fits a short laptop window, so the
+     nav scrolls inside itself rather than pushing the sign-out off the bottom
+     where nobody would find it. */
+  overflow: hidden;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  padding: var(--space-xs) var(--space-md) var(--space-lg);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+  /* Lets the nav shrink so its own scrolling actually happens, rather than the
+     column growing to fit every row. */
+  min-height: 0;
+  flex: 1;
+}
+
+/* The small grey heading above each group of links. */
+.navGroup {
+  padding: var(--space-lg) var(--space-md) var(--space-xs);
+  text-transform: uppercase;
+}
+
+.navGroup:first-child {
+  padding-top: 0;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  color: var(--ink2);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  /* 36px rather than a touch-sized 44. This is a mouse-driven tool on a screen
+     where sixteen rows have to fit without scrolling on a normal laptop. */
+  min-height: 36px;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.navLink:hover {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+/* The screen you are on. Colour AND a filled background, not colour alone —
+   the current row has to be findable at a glance halfway down a long list. */
+.navLinkActive,
+.navLinkActive:hover {
+  background: var(--tile);
+  color: var(--brand);
+}
+
+.navLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- THE COUNT BESIDE ACTION QUEUE ----
+   How many things are waiting. A number rather than a dot, because "14 waiting"
+   and "1 waiting" are different mornings. */
+.badge {
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebarFoot {
+  padding-top: var(--space-md);
+  margin-top: var(--space-sm);
+  border-top: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+
+/* ==================================================================
+   THE TOP BAR
+   ================================================================== */
+.topbar {
+  height: var(--admin-topbar);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding-inline: var(--space-2xl);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* Whoever is signed in, with a menu under their name. */
+.staffButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-xs);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline);
+  transition: background-color 0.15s ease;
+}
+
+.staffButton:hover {
+  background: var(--tile);
+}
+
+.staffMenu {
+  position: absolute;
+  top: calc(var(--admin-topbar) - var(--space-sm));
+  left: var(--space-2xl);
+  min-width: 240px;
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-floating);
+  padding: var(--space-sm);
+  z-index: 30;
+}
+
+.staffMenuHead {
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: var(--space-sm);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--ink2);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  min-height: 36px;
+}
+
+.menuItem:hover {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+/* ---- THE SEARCH BOX ----
+   Sits in the middle of the bar and stretches. It searches across customers,
+   businesses, vehicles and bookings at once, because a staff member on a call
+   has a name or a reference and does not know which list it belongs to. */
+.searchWrap {
+  flex: 1;
+  max-width: 520px;
+  margin-inline: auto;
+  position: relative;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 40px;
+  padding-inline: var(--space-lg);
+  border-radius: var(--radius-pill);
+  background: var(--tile);
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.searchBox:focus-within {
+  border-color: var(--brand);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.searchInput::placeholder {
+  color: var(--ink3);
+}
+
+/* The results that drop down under the search box. */
+.results {
+  position: absolute;
+  top: calc(100% + var(--space-sm));
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-floating);
+  padding: var(--space-sm);
+  max-height: 420px;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+}
+
+.result:hover {
+  background: var(--tile);
+}
+
+.resultKind {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+/* The bell, with its unread count sitting on the corner. */
+.bellWrap {
+  position: relative;
+}
+
+.bellCount {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* ==================================================================
+   THE MAIN AREA
+   ================================================================== */
+.main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  flex: 1;
+  padding: var(--space-2xl);
+  max-width: var(--content-max);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+/* ==================================================================
+   THE BIG CARD
+   Every screen puts its content inside one of these: a large rounded
+   panel with a header carrying the title, a search box for the list
+   inside it, and whatever actions belong to the screen.
+   ================================================================== */
+.card {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-2xl) var(--space-2xl) var(--space-lg);
+}
+
+.cardTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cardSearch {
+  margin-left: auto;
+  width: 100%;
+  max-width: 340px;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.cardBody {
+  padding: 0 var(--space-2xl) var(--space-2xl);
+  min-width: 0;
+}
+
+/* A CARD WITH NO HEADER STILL NEEDS A TOP EDGE. The padding above normally
+   comes from .cardHead; without a title there is no header to supply it, and the
+   content sat one pixel from the top of the card. The three charts on the
+   analytics screen are the cards that do this — they carry their own heading
+   inside, so they pass no title. */
+.cardBodyOnly {
+  padding-top: var(--space-2xl);
+}
+
+/* A card whose body is a table wants no side padding — the table draws its own
+   full-width dividing lines and they should reach the edges of the card. */
+.cardBodyFlush {
+  padding: 0 0 var(--space-sm);
+}
+
+/* ==================================================================
+   THE PAGE HEADING
+   Sits above the card: what this screen is, and what it is for.
+   ================================================================== */
+.pageHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2xl);
+  flex-wrap: wrap;
+}
+
+.pageHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-width: 720px;
+}
+
+.pageHeadActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* ==================================================================
+   THE DESKTOP-ONLY NOTICE
+   Shown instead of the panel on anything narrower than a laptop.
+   ================================================================== */
+.narrowNotice {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .layout {
+    display: none;
+  }
+
+  .narrowNotice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-lg);
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: var(--space-3xl);
+    text-align: center;
+  }
+}

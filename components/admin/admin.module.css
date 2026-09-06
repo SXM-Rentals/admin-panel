@@ -1,0 +1,725 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The shared shapes used across the panel's screens — the
+   row of headline numbers, the filter bar above a list, the reason dialog, the
+   detail pages, and the small blocks that appear on several screens at once. */
+
+/* ==================================================================
+   THE ROW OF HEADLINE NUMBERS
+   Four tiles across the top of the dashboard and several other
+   screens: a label, a big figure, and a line of context under it.
+   ================================================================== */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-lg);
+}
+
+.statGrid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stat {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+/* The figure itself. Tabular so a row of four tiles does not jitter as the
+   numbers change. */
+.statValue {
+  font-family: var(--font-heading-stack);
+  font-size: 30px;
+  line-height: 38px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.statSplit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+/* ---- THE DEPOSITS TILE ----
+   Deposits are not revenue, and the tile showing them should not look like the
+   tiles that are. A dashed border and its own colour say "this is a different
+   kind of number" before anybody reads the label. See the note on
+   PlatformSummary in types/admin.ts. */
+.statHeld {
+  border-style: dashed;
+  border-color: var(--warning);
+}
+
+.statHeld .statValue {
+  color: var(--warning);
+}
+
+/* ==================================================================
+   THE FILTER BAR
+   Sits above a list: a row of chips for status, a date range, and
+   whatever else that screen filters by.
+   ================================================================== */
+/* THE SIDE PADDING MATCHES THE TABLE'S CELL PADDING (--space-2xl), so a filter
+   chip lines up with the column it filters rather than sitting a centimetre to
+   the left of it. The bottom padding is what separates the filters from the
+   column headings underneath — without it the two rows touch and the header
+   reads as part of the filter row.
+
+   Both were missing because most screens wrapped their chips in a plain div
+   instead of this component. They all use this now. */
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+  padding: 0 var(--space-2xl) var(--space-xl);
+}
+
+/* A filter bar directly under a card header needs a little air above it too. */
+.filterBar:first-child {
+  padding-top: var(--space-xs);
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  margin-right: var(--space-xs);
+}
+
+.select {
+  background: var(--tile);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px var(--space-md);
+  cursor: pointer;
+}
+
+.select:hover {
+  border-color: var(--ink3);
+}
+
+/* Pushes whatever follows to the far end of the bar — usually a count of what
+   the filters left, or an export button. */
+.filterSpacer {
+  margin-left: auto;
+}
+
+/* ==================================================================
+   THE DATE RANGE
+   The quick ranges and the two date boxes on the analytics screen.
+   They set the same thing, so they sit on one row together rather
+   than in two separate controls that can disagree.
+   ================================================================== */
+.rangeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xl);
+  flex-wrap: wrap;
+}
+
+.rangeChip {
+  padding: 7px var(--space-md);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline);
+  background: var(--tile);
+  color: var(--ink2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.rangeChip:hover {
+  color: var(--ink);
+  border-color: var(--ink3);
+}
+
+/* The quick range currently matching the two dates. Derived rather than stored,
+   so typing a date by hand simply stops matching and this turns itself off. */
+.rangeChipOn,
+.rangeChipOn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+/* The browser draws its own date picker inside this. color-scheme: dark on the
+   root is what stops that picker coming out as a white panel on a dark page. */
+.dateInput {
+  background: var(--tile);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  padding: 7px var(--space-md);
+  cursor: pointer;
+}
+
+.dateInput:hover {
+  border-color: var(--ink3);
+}
+
+.dateInput:focus-visible {
+  border-color: var(--brand);
+}
+
+/* ==================================================================
+   THE REASON DIALOG
+   ================================================================== */
+.reasonBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* What is about to change, shown before it changes. */
+.changePreview {
+  background: var(--tile);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.changeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+/* A row of two or three short fields inside a form, each with its own small
+   heading above it. */
+.formRow {
+  display: flex;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+  flex: 1;
+}
+
+.formField .numberInput,
+.formField .select,
+.formField .dateInput {
+  width: 100%;
+  text-align: left;
+}
+
+/* ==================================================================
+   DETAIL SCREENS
+   A customer, a business, a booking, a dispute: two columns, with the
+   main record on the left and the smaller facts on the right.
+   ================================================================== */
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.detailStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  min-width: 0;
+}
+
+/* A label and a value on one line, repeated down a card. The workhorse of every
+   detail screen. */
+.infoRows {
+  display: flex;
+  flex-direction: column;
+}
+
+.infoRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xl);
+  padding-block: var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.infoRow:last-child {
+  border-bottom: none;
+}
+
+.infoValue {
+  text-align: right;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A phone number that must not break mid-digits, with its marker beneath rather
+   than squeezed alongside. */
+.ownerNumber {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--hairline);
+}
+
+.ownerNumber .pillRow {
+  gap: var(--space-sm);
+}
+
+/* ---- EDITING A SINGLE FIELD IN PLACE ---- */
+.editControl {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.editInput {
+  background: var(--tile);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 14px;
+  padding: 6px var(--space-md);
+  min-width: 180px;
+  text-align: right;
+}
+
+.editInput:focus-visible {
+  border-color: var(--brand);
+}
+
+/* A quiet pencil beside the value rather than a button on every row. These rows
+   are mostly read; a column of Edit buttons would make a record look like a
+   form. It only takes colour on hover, so it stays out of the way until wanted. */
+.editButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  color: var(--ink3);
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.editButton:hover {
+  background: var(--tile);
+  color: var(--brand);
+}
+
+/* ==================================================================
+   THE MONEY BREAKDOWN
+   What the customer paid, what the business gets, what we keep — and,
+   kept visibly apart from all three, the deposit.
+   ================================================================== */
+.moneyRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding-block: var(--space-sm);
+}
+
+.moneyTotal {
+  border-top: 1px solid var(--hairline);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-md);
+}
+
+/* The deposit line, separated from the money above it by more than a border.
+   Everything above adds up; this does not belong to the sum at all. */
+.depositNote {
+  margin-top: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.depositNote > svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* ==================================================================
+   DOCUMENT REVIEW
+   The verification screens: one block per document, with what it is,
+   when it arrived, and the two decisions.
+   ================================================================== */
+.docList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.doc {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* A document still waiting to be read gets a coloured edge, so a page of three
+   documents shows at a glance which one wants attention. */
+.docPending {
+  border-left: 3px solid var(--warning);
+}
+
+.docRejected {
+  border-left: 3px solid var(--danger);
+}
+
+.docApproved {
+  border-left: 3px solid var(--success);
+}
+
+.docHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.docActions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+/* Standing in for the actual scan, which needs the storage bucket. */
+.docPreview {
+  height: 160px;
+  border-radius: var(--radius-md);
+  background: var(--tile);
+  border: 1px dashed var(--hairline);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  color: var(--ink3);
+}
+
+/* The reason a document was turned down, shown on the document itself rather
+   than buried in the audit log — this is what the provider will ring up about. */
+.rejectionNote {
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+}
+
+/* ==================================================================
+   THE QUEUE
+   ================================================================== */
+.queueList {
+  display: flex;
+  flex-direction: column;
+}
+
+.queueItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-lg) var(--space-2xl);
+  border-bottom: 1px solid var(--hairline);
+  transition: background-color 0.15s ease;
+}
+
+.queueItem:last-child {
+  border-bottom: none;
+}
+
+.queueItem:hover {
+  background: var(--tile);
+}
+
+/* The round icon at the start of a queue row, coloured by which of the three
+   queues the item came from. */
+.queueIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.queueText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.queueWait {
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+/* ==================================================================
+   SETTINGS AND REWARDS
+   Stacked cards with a row per switch or per value.
+   ================================================================== */
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2xl);
+  padding-block: var(--space-lg);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.settingRow:last-child {
+  border-bottom: none;
+}
+
+.settingText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settingControl {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.numberInput {
+  width: 110px;
+  background: var(--tile);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  padding: var(--space-sm) var(--space-md);
+  text-align: right;
+}
+
+/* A note attached to a setting that is still an open question rather than a
+   settled decision — the KYC bundling question, the Dutch-side payout entity.
+   Marked so it reads as "we have not confirmed this" rather than as a fact. */
+.openQuestion {
+  margin-top: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  border-left: 3px solid var(--warning);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.openQuestion > svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* ==================================================================
+   THE PLAYBOOK
+   ================================================================== */
+
+/* The four layers across the top, with an arrow between each — the shape of the
+   system before any of the detail. Reading it left to right is the order data
+   actually travels: what a person touches, what serves it, what it calls, and
+   what it all runs on. */
+.layerMap {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-md);
+}
+
+.layerMap > svg {
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.layerCard {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--tile);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.playbookGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg);
+}
+
+.playbookItem {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* One shared component, with a live example of it sitting next to the words
+   describing it. */
+.componentRow {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) auto;
+  gap: var(--space-lg);
+  align-items: center;
+  padding-block: var(--space-lg);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.componentRow:last-child {
+  border-bottom: none;
+}
+
+.componentDemo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--brand);
+}
+
+/* ==================================================================
+   TWO-COLUMN DASHBOARD
+   ================================================================== */
+.dashGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.chartCard {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+/* A short list of links out to somewhere else — the three action queues on the
+   dashboard, the recent entries on the audit card. */
+.linkList {
+  display: flex;
+  flex-direction: column;
+}
+
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding-block: var(--space-md);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.linkRow:last-child {
+  border-bottom: none;
+}
+
+.linkRowText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ==================================================================
+   SMALL SHARED BITS
+   ================================================================== */
+.pillRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.inlineNote {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+/* A note straight after a settings row was sitting on that row's bottom border
+   with nothing between them, so the two read as one crushed block. The row is
+   still separated by its border; the note now has room to be a note. */
+.settingRow + .inlineNote,
+.settingRow + .openQuestion {
+  margin-top: var(--space-lg);
+}
+
+.inlineNote > svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.sectionStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+/* A long piece of quoted text — what a customer said when they asked for a
+   refund, the detail of a dispute. Set apart so it reads as somebody else's
+   words rather than as ours. */
+.quote {
+  padding-left: var(--space-lg);
+  border-left: 2px solid var(--hairline);
+  color: var(--ink2);
+}

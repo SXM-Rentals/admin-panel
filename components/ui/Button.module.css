@@ -1,0 +1,163 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of every button on the site — the rounded
+   "pill" shapes you click to move forward, like "Book Now" or "Continue".
+   Every colour here is read from the rulebook in app/globals.css, so buttons
+   follow light and dark mode without this file knowing anything about either. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-xl);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  /* A short fade on hover. Kept quick — a slow button feels unresponsive. */
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, opacity 0.15s ease;
+  /* Stops a double-click selecting the label text like a paragraph. */
+  user-select: none;
+}
+
+/* ---- SIZES ----
+   Never smaller than 44px tall, which is the smallest target most people can
+   reliably hit — on a touchscreen with a finger, or with a shaky hand and a
+   mouse. */
+.lg { min-height: var(--size-button); font-size: 16px; }
+.md { min-height: 48px; font-size: 16px; }
+.sm { min-height: var(--size-button-sm); font-size: 14px; padding-inline: var(--space-lg); }
+
+/* Stretches across whatever it sits in, for the main action at the end of a
+   form or the bottom of a card. */
+.fullWidth {
+  display: flex;
+  width: 100%;
+}
+
+/* ---- THE FIVE LOOKS ---- */
+
+/* The solid dark button used for the main action on a page. In dark mode this
+   becomes near-white with dark text, which is handled entirely by the variables. */
+.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+/* A soft grey button for a second, less important choice. */
+.secondary {
+  background: var(--tile);
+  border-color: var(--tile);
+  color: var(--ink);
+}
+
+/* Just a thin outline, for quieter actions. */
+.outline {
+  background: transparent;
+  border-color: var(--hairline);
+  color: var(--ink);
+}
+
+/* Text only, no background, for the quietest actions. */
+.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink);
+}
+
+/* Cancelling, deleting, anything destructive. */
+.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+}
+
+/* ---- HOVER ----
+   The mobile app has no hover states because a finger cannot hover. On a laptop
+   they are essential: without them, nothing on the page reacts to the mouse and
+   it is genuinely hard to tell what is clickable.
+
+   Wrapped in a check for whether the device actually has a mouse, so a
+   touchscreen laptop does not leave buttons stuck in a hovered state after being
+   tapped. */
+@media (hover: hover) {
+  .button:hover:not(:disabled):not(.disabled) {
+    opacity: 0.88;
+  }
+
+  .primary:hover:not(:disabled):not(.disabled) {
+    background: var(--primary-pressed);
+    border-color: var(--primary-pressed);
+    opacity: 1;
+  }
+
+  .outline:hover:not(:disabled):not(.disabled),
+  .ghost:hover:not(:disabled):not(.disabled) {
+    background: var(--tile);
+    opacity: 1;
+  }
+}
+
+/* A slight press-in while the mouse button is held down, so a click feels
+   physical rather than instant. */
+.button:active:not(:disabled):not(.disabled) {
+  transform: translateY(1px);
+}
+
+/* ---- SWITCHED OFF ----
+   A disabled button has to LOOK disabled. One that looks normal but does
+   nothing when clicked is indistinguishable from a broken one. */
+.button:disabled,
+.disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.primary:disabled,
+.danger:disabled,
+.primary.disabled,
+.danger.disabled {
+  background: var(--disabled);
+  border-color: var(--disabled);
+  color: var(--card);
+}
+
+.secondary:disabled,
+.outline:disabled,
+.ghost:disabled,
+.secondary.disabled,
+.outline.disabled,
+.ghost.disabled {
+  background: var(--disabled-surface);
+  border-color: var(--disabled-surface);
+  color: var(--ink3);
+}
+
+/* ---- THE PRICE SHOWN ON THE LEFT ----
+   Used on the booking pages: "$1,400   Pay Now". */
+.price {
+  margin-right: auto;
+  padding-right: var(--space-lg);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* ---- WAITING ----
+   A small spinning ring while something is happening, so a slow action does not
+   look like a button that failed to respond. */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

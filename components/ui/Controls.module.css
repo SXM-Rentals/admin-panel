@@ -1,0 +1,208 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the four small controls people use to make
+   choices — the rounded chips on the search filters, the sliding two-or-three
+   way switch, the tick box, and the on/off switch. */
+
+/* ---- CHIP ----
+   A rounded pill that can be selected, used all over the search filters. */
+.chip {
+  /* Was 38px. These are the search filters — the most-tapped controls on the
+     site after the cars themselves. */
+  min-height: var(--size-touch-min);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: var(--space-lg);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* A selected chip flips to the solid dark colour, which inverts to near-white
+   in dark mode along with everything else. */
+.chipSelected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+@media (hover: hover) {
+  .chip:hover:not(:disabled):not(.chipSelected) {
+    border-color: var(--ink3);
+    background: var(--tile);
+  }
+}
+
+.chip:disabled {
+  color: var(--ink3);
+  background: var(--disabled-surface);
+  border-color: var(--disabled-surface);
+  cursor: not-allowed;
+}
+
+/* A row of chips that scrolls sideways when there are more than fit. */
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* ---- SEGMENTED CONTROL ----
+   Two or three choices side by side, one of which is always selected. Used for
+   Upcoming / Active / Past. */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--tile);
+  gap: 2px;
+  /* THE TABS CANNOT SHRINK. Each one refuses to wrap its label, and on a very
+     narrow phone three of them together are wider than the screen — which used
+     to push the entire page sideways rather than just the tabs. Letting the row
+     scroll inside itself keeps the page still: the widest thing on the page is
+     now the page. max-width has to be here as well, because an inline-flex box
+     sizes itself to its content and would otherwise never notice the limit. */
+  max-width: 100%;
+  overflow-x: auto;
+  /* Stops the scroll from clipping the focus ring off the first and last tab. */
+  scroll-padding-inline: 3px;
+}
+
+.segmentedFull {
+  display: flex;
+  width: 100%;
+}
+
+.segment {
+  flex: 1;
+  /* 44px is the smallest thing a thumb hits reliably. It was 38px, which is
+     comfortable with a mouse and fiddly with a finger. */
+  min-height: var(--size-touch-min);
+  padding-inline: var(--space-lg);
+  border-radius: var(--radius-pill);
+  color: var(--ink2);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.segmentActive {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+
+@media (hover: hover) {
+  .segment:hover:not(.segmentActive) { color: var(--ink); }
+}
+
+/* ---- CHECKBOX ----
+   The whole row is clickable, not just the little square, because a 20px target
+   is genuinely hard to hit. */
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  min-height: var(--size-touch-min);
+  padding-block: var(--space-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.checkboxBox {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border-radius: 6px;
+  border: 1.5px solid var(--hairline);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-text);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.checkboxChecked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+@media (hover: hover) {
+  .checkboxRow:hover .checkboxBox { border-color: var(--ink3); }
+}
+
+/* The real tick box sits invisibly on top of ours. Keeping the browser's own
+   control rather than drawing a fake one means the keyboard, the space bar and
+   screen readers all work exactly as people expect, with no extra code. */
+.nativeControl {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+/* Because the real control is invisible, its focus ring has to be drawn on the
+   part that is actually visible. */
+.nativeControl:focus-visible + .checkboxBox,
+.nativeControl:focus-visible + .track {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* ---- TOGGLE ----
+   The sliding on/off switch used in Settings. */
+.toggleRow {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.track {
+  width: 50px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  background: var(--disabled-surface);
+  border: 1px solid var(--hairline);
+  padding: 2px;
+  display: flex;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.trackOn {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.knobOn {
+  transform: translateX(20px);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* On a phone the generous side padding is what makes three tabs wider than the
+   screen. Tightening it usually removes the need to scroll them at all. */
+@media (max-width: 420px) {
+  .segment { padding-inline: var(--space-md); }
+}
