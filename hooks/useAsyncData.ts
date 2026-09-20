@@ -17,6 +17,7 @@
 // the same hook gives every screen pull-to-refresh for free.
 
 import { useCallback, useEffect, useState } from 'react';
+import { presentError } from '@/lib/api/errors';
 
 export type AsyncState<T> = {
   data: T | undefined;
@@ -56,8 +57,10 @@ export function useAsyncData<T>(
         setData(result);
       } catch (caught) {
         // Whatever went wrong, the person reading this is not a developer, so
-        // they get something they can act on rather than the raw fault.
-        setError(readableMessage(caught));
+        // they get something they can act on rather than the raw fault. Where
+        // SXM Rentals itself explained the refusal, that explanation is what
+        // they see — see lib/api/errors.ts.
+        setError(presentError(caught));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -83,28 +86,19 @@ export function useAsyncData<T>(
   return { data, loading, refreshing, error, refresh };
 }
 
-// ---- TURNING A FAULT INTO SOMETHING A PERSON CAN READ ----
-// Nobody should ever be shown "TypeError: Failed to fetch". They should be told
-// what happened and what to do about it.
-function readableMessage(caught: unknown): string {
-  const raw = caught instanceof Error ? caught.message : String(caught);
-
-  // The most common one by far, and the one with an obvious action attached.
-  if (/network|fetch|timeout|connection/i.test(raw)) {
-    return 'We could not reach SXM Rentals. Check your connection and try again.';
-  }
-
-  if (/404|not found/i.test(raw)) {
-    return 'We could not find that. It may have been removed.';
-  }
-
-  if (/401|403|unauthor|forbidden/i.test(raw)) {
-    return 'You need to sign in again to see this.';
-  }
-
-  if (/5\d\d|server/i.test(raw)) {
-    return 'Something went wrong at our end. Please try again in a moment.';
-  }
-
-  return 'Something went wrong. Please try again.';
-}
+// ---- WHERE THE WORDING NOW LIVES ----
+// This file used to hold a list of patterns that turned a fault into a sentence:
+// anything mentioning 404 became "We could not find that", and anything else
+// became "Something went wrong. Please try again."
+//
+// That was right while there was no server. It is wrong now, and quietly so: a
+// refusal from SXM Rentals arrives carrying a sentence written for the person
+// reading it — "This customer still has a rental running" — and matching that
+// against a list of patterns would either rewrite it or, far more often, throw
+// it away and show "Something went wrong" in its place. The one useful thing
+// said about the failure would be the one thing not shown.
+//
+// So the decision moved to lib/api/errors.ts, where it can tell the difference
+// between the server refusing and the server never being reached. The patterns
+// still exist there, and still do their old job for faults nobody wrote a
+// message for.
