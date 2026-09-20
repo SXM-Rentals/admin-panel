@@ -14,7 +14,7 @@
 
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
 
 // Tests share one page. Without this, the second test in a file finds the first
 // test's buttons still sitting there and "found two matching elements" failures
@@ -83,4 +83,26 @@ if (!navigator.clipboard) {
 afterEach(() => {
   window.localStorage.clear();
   window.sessionStorage.clear();
+});
+
+// ---- NOTHING IN A TEST TALKS TO THE REAL SERVER ----
+// The panel asks the server who is signed in as soon as it starts, so without
+// this every test would make a real request over the internet — slow, different
+// every run, and failing entirely when SXM Rentals is asleep.
+//
+// The stand-in answers the way the server answers a visitor with no session: a
+// polite "nobody is signed in". That is a real answer rather than a fault, so
+// the panel settles immediately on the sign-in screen instead of retrying and
+// leaving timers running after the test has finished.
+//
+// A test that cares about a particular reply replaces this for itself.
+beforeEach(() => {
+  global.fetch = vi.fn().mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        error: { code: 'unauthorized', message: 'Please sign in to the admin panel.' },
+      }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    ),
+  ) as unknown as typeof fetch;
 });

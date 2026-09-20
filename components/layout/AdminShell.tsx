@@ -26,24 +26,30 @@ import { apiClient } from '@/lib/api-client';
 import { AppErrorBoundary, Logo, Text } from '@/components/ui';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminTopBar, type SearchIndex } from './AdminTopBar';
+import { ServerUnreachable, ServerWaking, useServerWaking } from './ServerState';
+import { SessionExpired } from './SessionExpired';
 import styles from './shell.module.css';
 
 const EMPTY_INDEX: SearchIndex = { users: [], providers: [], vehicles: [], bookings: [] };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isSignedIn, loading } = useAdminSession();
+  const { isSignedIn, loading, phase, recheck } = useAdminSession();
+  const waking = useServerWaking();
 
   const [queueCount, setQueueCount] = useState(0);
   const [index, setIndex] = useState<SearchIndex>(EMPTY_INDEX);
 
-  // Send anybody without a session to the sign-in screen. Waits for "loading" to
-  // finish first: without that check, somebody who IS signed in gets bounced to
-  // the sign-in screen for a split second on every page load, while the browser
-  // is still reading back whether they were.
+  // Send anybody without a session to the sign-in screen.
+  //
+  // ONLY WHEN THE SERVER ACTUALLY SAID SO. This deliberately fires on
+  // "signed-out" rather than on "not signed in", because those are no longer the
+  // same thing: a server that cannot be reached leaves us not knowing, and
+  // treating not knowing as "sign in again" sends somebody off to type a
+  // password at a server that is not going to answer.
   useEffect(() => {
-    if (!loading && !isSignedIn) router.replace('/login');
-  }, [loading, isSignedIn, router]);
+    if (phase === 'signed-out') router.replace('/login');
+  }, [phase, router]);
 
   // The frame's own data. Only fetched once there is somebody to show it to.
   useEffect(() => {
@@ -67,9 +73,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     };
   }, [isSignedIn]);
 
-  // Nothing at all while the session is being read back. A blank moment is
-  // better than a flash of the panel followed by a redirect away from it.
-  if (loading || !isSignedIn) return null;
+  // The server could not be reached, so we genuinely do not know who this is.
+  // Said plainly, with a way to try again.
+  if (phase === 'unreachable') return <ServerUnreachable onRetry={recheck} />;
+
+  // Still asking who is signed in. Normally that is quick enough to show
+  // nothing — a blank moment beats a flash of the panel followed by a redirect
+  // away from it. But when the server is asleep this takes most of a minute, and
+  // a blank screen for a minute is indistinguishable from a broken one.
+  if (loading) return waking ? <ServerWaking /> : null;
+
+  if (!isSignedIn) return null;
 
   return (
     <>
@@ -86,6 +100,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
       </div>
+
+      {/* A session that ended while somebody was still working. Deliberately
+          rendered alongside the panel rather than instead of it — see the note
+          at the top of SessionExpired.tsx. */}
+      {phase === 'locked' ? <SessionExpired /> : null}
 
       {/* Shown instead of everything above on a narrow window. */}
       <div className={styles.narrowNotice}>

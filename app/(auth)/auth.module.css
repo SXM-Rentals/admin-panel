@@ -92,10 +92,10 @@
   text-align: center;
 }
 
-/* ---- THE NOTE SAYING THIS SIGN-IN IS NOT REAL ----
-   Stated plainly rather than hidden. Anybody opening this during development
-   should know within a second that no password is being checked, so nobody
-   mistakes it for a security review having been done. */
+/* ---- A SHORT ASIDE UNDER THE FORM ----
+   Used for the warning that an authenticator secret is shown once and cannot be
+   shown again. Deliberately quiet: it sits beside the thing it is about rather
+   than interrupting it. */
 .demoNote {
   display: flex;
   gap: var(--space-sm);
@@ -109,4 +109,43 @@
 .demoNote > svg {
   margin-top: 2px;
   flex-shrink: 0;
+}
+
+/* ---- THE AUTHENTICATOR QR CODE ----
+   Drawn in the page from the secret the server just handed over, never fetched
+   from anywhere. The white plate behind it is not decoration: the panel is dark
+   throughout, and a QR code drawn dark-on-dark is one a phone camera cannot
+   read. This is the single place in the panel where a white background is the
+   correct answer. */
+.qr {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.qr img {
+  display: block;
+  width: 220px;
+  height: 220px;
+}
+
+/* ---- THE SAME SECRET, WRITTEN OUT ----
+   For anybody who cannot photograph their own screen — signing in on the
+   machine the authenticator app is on, for one. Monospaced and able to break
+   anywhere, because it is read a character at a time and typed by hand. */
+.secret {
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--tile);
+  border: 1px solid var(--hairline);
+  text-align: center;
+}
+
+.secret > p:last-child {
+  margin-top: var(--space-xs);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  word-break: break-all;
 }

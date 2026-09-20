@@ -433,3 +433,58 @@
     text-align: center;
   }
 }
+
+/* ---- WHEN THE PROBLEM IS THE SERVER ----
+   Shown instead of the whole panel while the server is starting up, or when it
+   cannot be reached at all. Centred and quiet on purpose: this is a short wait
+   being explained, not an error being reported. Same shape as the narrow-window
+   notice above, for the same reason — it replaces everything rather than
+   appearing inside it. */
+.serverState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-3xl);
+  text-align: center;
+}
+
+/* ---- THE SIGN-IN THAT APPEARS OVER A PANEL STILL IN USE ----
+   Shown when a session ends while somebody is mid-change. The panel underneath
+   is deliberately left mounted and visible — everything typed is still in it —
+   so this sits over the top rather than replacing it. Dimmed and blurred so it
+   is obvious the screen behind is not usable until this is dealt with, but still
+   visible enough that somebody can see their work is still there. */
+.lockOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  background: var(--scrim, rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(3px);
+}
+
+.lockCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-2xl);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-lg, 0 24px 60px rgba(0, 0, 0, 0.45));
+}
+
+.lockForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
