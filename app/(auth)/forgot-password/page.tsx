@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
                 type="email"
                 autoComplete="username"
                 iconLeft="mail-outline"
-                placeholder="you@sxmrentals.com"
+                placeholder="you@sxmrentals.app"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required

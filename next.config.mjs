@@ -7,9 +7,9 @@
 // WHY THE REWRITE EXISTS, AND WHY IT IS NOT OPTIONAL: staff are signed in by a
 // cookie the browser is not allowed to read. A browser will not send that cookie
 // to a different website, and the panel and the server ARE different websites —
-// the panel is on vercel.app, the server on onrender.com. So every request would
-// arrive with nobody attached to it, and the panel would be permanently signed
-// out no matter how correct the sign-in was.
+// the panel is at admin.sxmrentals.app, the server on onrender.com. So every
+// request would arrive with nobody attached to it, and the panel would be
+// permanently signed out no matter how correct the sign-in was.
 //
 // The rewrite removes the problem rather than working around it. The browser only
 // ever talks to the panel's own address, and the panel passes the request on. As

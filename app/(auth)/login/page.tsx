@@ -132,7 +132,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="username"
               iconLeft="person-outline"
-              placeholder="you@sxmrentals.com"
+              placeholder="you@sxmrentals.app"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
