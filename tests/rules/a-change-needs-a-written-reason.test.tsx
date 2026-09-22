@@ -95,7 +95,7 @@ describe('a change cannot be made without a reason', () => {
     await user.click(confirmButton());
 
     // Trimmed, and otherwise untouched. The server writes this into the log.
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(reason, undefined));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(reason, {}));
   });
 
   it('stops at the thousand characters the server will accept', async () => {
@@ -193,6 +193,6 @@ describe('keeping part of a deposit needs an amount the server will accept', () 
     await user.click(confirmButton());
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
-    expect(onConfirm.mock.calls[0]).toEqual([reason, 2.3]);
+    expect(onConfirm.mock.calls[0]).toEqual([reason, { amount: 2.3 }]);
   });
 });

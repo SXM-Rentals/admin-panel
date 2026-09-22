@@ -73,6 +73,9 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Platform',
     items: [
+      // First in the group: who can get in at all matters more than anything
+      // they can then change.
+      { href: '/staff', label: 'Staff', icon: 'shield-outline' },
       { href: '/rewards', label: 'Rewards', icon: 'medal-outline' },
       { href: '/audit', label: 'Audit Log', icon: 'documents-outline' },
       { href: '/settings', label: 'Settings', icon: 'settings-outline' },

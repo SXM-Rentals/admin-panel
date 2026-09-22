@@ -96,10 +96,18 @@ export type ReasonDialogProps = {
     hint?: string;
   };
 
-  // What actually performs the change. Called only once the reason (and the
-  // amount, if there is one) passes. If it throws, the dialog stays open with
-  // everything still typed, and says what went wrong.
-  onConfirm: (reason: string, amount?: number) => Promise<void> | void;
+  // ---- YOUR AUTHENTICATOR CODE, FOR THE CHANGES THAT DECIDE WHO GETS IN ----
+  // Adding a member of staff, resetting one, taking one's access away. A session
+  // left open on somebody's desk is enough to approve a refund; it is
+  // deliberately not enough to create a new administrator or lock everybody else
+  // out, so these ask for the six digits the person's own app shows right now.
+  // Like the amount above, a single named thing rather than a slot for anything.
+  confirmWithCode?: boolean;
+
+  // What actually performs the change. Called only once the reason — and the
+  // amount or the code, when they are asked for — passes. If it throws, the
+  // dialog stays open with everything still typed, and says what went wrong.
+  onConfirm: (reason: string, extras: { amount?: number; code?: string }) => Promise<void> | void;
 };
 
 export function ReasonDialog({
@@ -112,12 +120,14 @@ export function ReasonDialog({
   reasonPlaceholder = 'Why are you making this change?',
   change,
   amount,
+  confirmWithCode = false,
   onConfirm,
 }: ReasonDialogProps) {
   const { showToast } = useToast();
 
   const [reason, setReason] = useState('');
   const [amountText, setAmountText] = useState('');
+  const [code, setCode] = useState('');
   const [touched, setTouched] = useState(false);
   const [working, setWorking] = useState(false);
   const [problem, setProblem] = useState<string | undefined>(undefined);
@@ -129,6 +139,7 @@ export function ReasonDialog({
     if (open) {
       setReason('');
       setAmountText('');
+      setCode('');
       setTouched(false);
       setWorking(false);
       setProblem(undefined);
@@ -159,7 +170,14 @@ export function ReasonDialog({
             ? `That is more than the ${money(amount.max)} being held.`
             : undefined;
 
-  const blocked = tooShort || amountProblem !== undefined;
+  // Six digits, exactly as the app shows them.
+  const codeProblem = !confirmWithCode
+    ? undefined
+    : /^\d{6}$/.test(code)
+      ? undefined
+      : 'Enter the six digits your authenticator app shows now.';
+
+  const blocked = tooShort || amountProblem !== undefined || codeProblem !== undefined;
 
   const submit = async () => {
     setTouched(true);
@@ -168,10 +186,18 @@ export function ReasonDialog({
     setWorking(true);
     setProblem(undefined);
 
+    // Only what was asked for goes back to the screen.
+    const extras: { amount?: number; code?: string } = {};
+    if (amount) extras.amount = parsedAmount;
+    if (confirmWithCode) extras.code = code;
+
     try {
-      await onConfirm(reason.trim(), amount ? parsedAmount : undefined);
+      await onConfirm(reason.trim(), extras);
     } catch (caught) {
       setWorking(false);
+      // A code is good for about half a minute. Whatever went wrong, the next
+      // attempt wants a fresh one, not the one that was just used.
+      setCode('');
 
       // IF THE CHANGE FAILS, SAY SO AND STAY OPEN. A dialog that closed and
       // announced "Done" whatever happened would make a change that never landed
@@ -286,6 +312,25 @@ export function ReasonDialog({
               : 'Recorded in the audit log against your name. Write it for whoever reads it next year.'
           }
         />
+
+        {confirmWithCode ? (
+          <Input
+            label="Your authenticator code"
+            // The number pad rather than a full keyboard, and no autofill
+            // guessing at it.
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            iconLeft="key-outline"
+            placeholder="000000"
+            maxLength={6}
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+            onBlur={() => setTouched(true)}
+            error={touched && code !== '' ? codeProblem : undefined}
+            hint="This change decides who can get into the panel, so it needs you as well as your session: the six digits your app shows right now."
+            required
+          />
+        ) : null}
       </div>
     </Sheet>
   );

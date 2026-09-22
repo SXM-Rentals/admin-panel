@@ -28,13 +28,14 @@ import { AdminSidebar } from './AdminSidebar';
 import { AdminTopBar, type SearchIndex } from './AdminTopBar';
 import { ServerUnreachable, ServerWaking, useServerWaking } from './ServerState';
 import { SessionExpired } from './SessionExpired';
+import { SetOwnPassword } from './SetOwnPassword';
 import styles from './shell.module.css';
 
 const EMPTY_INDEX: SearchIndex = { users: [], providers: [], vehicles: [], bookings: [] };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isSignedIn, loading, phase, recheck } = useAdminSession();
+  const { isSignedIn, loading, phase, recheck, mustChangePassword } = useAdminSession();
   const waking = useServerWaking();
 
   const [queueCount, setQueueCount] = useState(0);
@@ -64,7 +65,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   //   - The lists the top-bar search looks through. Each is fetched on its own,
   //     so a search can still find customers when bookings failed to load.
   useEffect(() => {
-    if (!isSignedIn) return;
+    // Not while they still hold a temporary password: the server refuses
+    // everything but setting a new one, and asking would only collect refusals.
+    if (!isSignedIn || mustChangePassword) return;
     let cancelled = false;
 
     apiClient
@@ -96,7 +99,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn]);
+  }, [isSignedIn, mustChangePassword]);
 
   // The server could not be reached, so we genuinely do not know who this is.
   // Said plainly, with a way to try again.
@@ -109,6 +112,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   if (loading) return waking ? <ServerWaking /> : null;
 
   if (!isSignedIn) return null;
+
+  // Signed in with a temporary password somebody else chose: nothing else until
+  // they have chosen their own. See SetOwnPassword.tsx for why.
+  if (mustChangePassword) return <SetOwnPassword />;
 
   return (
     <>

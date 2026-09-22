@@ -171,6 +171,14 @@ export function AdminTopBar({
               </Text>
             </div>
 
+            <Link href="/account" className={styles.menuItem} role="menuitem">
+              <Icon name="person-outline" size={16} />
+              Your account
+            </Link>
+            <Link href="/staff" className={styles.menuItem} role="menuitem">
+              <Icon name="shield-outline" size={16} />
+              Staff
+            </Link>
             <Link href="/settings" className={styles.menuItem} role="menuitem">
               <Icon name="settings-outline" size={16} />
               Platform settings

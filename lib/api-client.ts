@@ -51,6 +51,7 @@ import type {
   QueueItem,
   RefundRequest,
   SeriesPoint,
+  StaffAccount,
 } from '@/types';
 
 // The most the server sends in one go.
@@ -300,9 +301,71 @@ export const apiClient = {
 
   // ---- STAFF ----
 
-  // Used by the dispute assignment picker and the audit log filter.
+  // Staff who can currently sign in. Used by the dispute assignment picker and
+  // the audit log filter — somebody whose access has been taken away should not
+  // be offered a dispute.
   async listStaff(): Promise<AdminStaff[]> {
     return api.get<AdminStaff[]>('/admin/staff');
+  },
+
+  // ---- STAFF ACCOUNTS ----
+  // Adding, resetting and removing the people who can use this panel.
+  //
+  // EVERY ONE OF THESE NEEDS YOUR AUTHENTICATOR CODE AS WELL AS A REASON. These
+  // are the only changes that decide who can get in at all. A session left open
+  // on somebody's desk is enough to approve a refund; it is deliberately not
+  // enough to create a new administrator, reset a colleague's sign-in, or lock
+  // everybody else out. The code proves the person at the keyboard is the person
+  // who signed in.
+  //
+  // A new or reset account gets a TEMPORARY password, which its owner must
+  // replace at their next sign-in. The person who set it knows it, and if it
+  // stayed the working password, two people could act as one account — and the
+  // audit log's "who did this" would stop meaning anything.
+
+  // Everybody, including those whose access has been taken away — they stay in
+  // the list so their past entries in the audit log still have a name to point
+  // at.
+  async listStaffAccounts(): Promise<StaffAccount[]> {
+    return api.get<StaffAccount[]>('/admin/staff', { query: { status: 'all' } });
+  },
+
+  async createStaff(
+    account: { name: string; email: string; password: string },
+    reason: string,
+    code: string,
+  ): Promise<StaffAccount> {
+    return api.post<StaffAccount>('/admin/staff', { body: { ...account, reason, code } });
+  },
+
+  // For a forgotten password or a lost phone. They are signed out everywhere,
+  // get the temporary password, and — if their phone is gone — set up their
+  // authenticator app again at their next sign-in.
+  async resetStaff(
+    id: string,
+    reset: { password: string; resetAuthenticator: boolean },
+    reason: string,
+    code: string,
+  ): Promise<StaffAccount> {
+    return api.post<StaffAccount>(`/admin/staff/${encodeURIComponent(id)}/reset`, {
+      body: { ...reset, reason, code },
+    });
+  },
+
+  // Taking somebody's access away — somebody who has left, or a lost laptop.
+  // They are signed out everywhere at once. Nobody can do this to themselves.
+  async disableStaff(id: string, reason: string, code: string): Promise<StaffAccount> {
+    return api.post<StaffAccount>(`/admin/staff/${encodeURIComponent(id)}/disable`, {
+      body: { reason, code },
+    });
+  },
+
+  // Giving it back. Their password is unchanged; if they need a new one, that is
+  // a reset.
+  async enableStaff(id: string, reason: string, code: string): Promise<StaffAccount> {
+    return api.post<StaffAccount>(`/admin/staff/${encodeURIComponent(id)}/enable`, {
+      body: { reason, code },
+    });
   },
 
   // ---- THE AUDIT LOG ----

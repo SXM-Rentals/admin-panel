@@ -28,6 +28,11 @@ export const auditActionLabels: Record<AuditAction, string> = {
   settings_changed: 'Settings Changed',
   dispute_assigned: 'Dispute Assigned',
   dispute_resolved: 'Dispute Resolved',
+  staff_created: 'Staff Member Added',
+  staff_reset: 'Staff Sign-in Reset',
+  staff_disabled: 'Staff Access Removed',
+  staff_enabled: 'Staff Access Restored',
+  password_changed: 'Password Changed',
 };
 
 // ---- IDENTITY CHECK PROVIDERS ----

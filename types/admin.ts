@@ -35,6 +35,23 @@ export type AdminStaff = {
   avatarInitials: string;
 };
 
+// ---- A STAFF ACCOUNT, AS THE STAFF SCREEN SEES IT ----
+// Everything needed to look after somebody's access, and nothing that could be
+// used to get in: no password, no authenticator secret, no lockout counter.
+export type StaffAccount = AdminStaff & {
+  // Whether they have set up an authenticator app. Until they have, they can
+  // sign in only far enough to do so.
+  mfaEnrolled: boolean;
+  // True for an account created or reset from this panel, until its owner sets
+  // a password of their own. The temporary one is somebody else's knowledge.
+  mustChangePassword: boolean;
+  lastSignInAt: string | null;
+  createdAt: string;
+  // Set when their access has been taken away. The account is kept so the
+  // audit log still has somebody to point at.
+  disabledAt: string | null;
+};
+
 // ---- THE AUDIT LOG ----
 // The defining requirement of this panel. Every account deletion and account
 // update is written here: which admin, what changed, the value before and the
@@ -56,7 +73,13 @@ export type AuditAction =
   | 'promotion_changed'
   | 'settings_changed'
   | 'dispute_assigned'
-  | 'dispute_resolved';
+  | 'dispute_resolved'
+  // Staff accounts, managed from the Staff screen.
+  | 'staff_created'
+  | 'staff_reset'
+  | 'staff_disabled'
+  | 'staff_enabled'
+  | 'password_changed';
 
 export type AuditEntry = {
   id: string;
@@ -65,7 +88,7 @@ export type AuditEntry = {
   staffName: string;
   action: AuditAction;
   // What was acted on, in words: "Customer · Aria Duncan", "Vehicle · SXM-V-118".
-  subjectType: 'customer' | 'provider' | 'vehicle' | 'booking' | 'payment' | 'platform';
+  subjectType: 'customer' | 'provider' | 'vehicle' | 'booking' | 'payment' | 'platform' | 'staff';
   subjectId: string;
   subjectLabel: string;
   field: string; // "Rewards points", "Insurance document", "Commission rate"

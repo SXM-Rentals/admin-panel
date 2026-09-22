@@ -3,11 +3,11 @@
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
 // WHAT THIS FILE DOES: The screen behind the "Forgot password?" link. It says
-// how a staff password gets reset, which today is by asking somebody.
+// how a staff password gets reset: by asking another member of staff.
 //
 // WHY THERE IS NO "SEND RESET LINK" BUTTON. The SXM Rentals server has no way
-// to reset a staff password by email: staff accounts are created and looked
-// after from the server itself. This screen used to take an address, wait half
+// to reset a staff password by email: a staff sign-in is reset by a colleague,
+// from the Staff screen, who can confirm it really is you asking. This screen used to take an address, wait half
 // a second and announce that a reset link was on its way — and no link was ever
 // sent. Somebody locked out would have waited for an email that was never
 // coming, and then assumed the email was the problem. Saying who to ask is the
@@ -38,15 +38,16 @@ export default function ForgotPasswordPage() {
       <div className={styles.card}>
         <div className={styles.form}>
           <Text variant="body" tone="ink2" as="p" raw>
-            Staff passwords are not reset by email. Ask whoever looks after the SXM Rentals server
-            to reset yours — staff accounts are managed there, not from this panel.
+            Staff passwords are not reset by email. Ask another member of staff to reset your
+            sign-in from the Staff screen. If there is nobody who can, whoever looks after the SXM
+            Rentals server can reset it there.
           </Text>
 
           <div className={styles.demoNote}>
             <Icon name="key-outline" size={15} color="var(--ink3)" />
             <Text variant="small" tone="ink3" as="p" raw>
-              Lost your authenticator app instead? That is reset the same way — the code cannot be
-              recovered from here either.
+              Lost your authenticator app instead? That is reset the same way, and you set it up
+              again the next time you sign in.
             </Text>
           </div>
         </div>

@@ -23,6 +23,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
+  changeOwnPassword,
   fetchSignedInStaff,
   signInWithPassword,
   signOutFromServer,
@@ -67,6 +68,14 @@ type SessionValue = {
   signOut: () => Promise<void>;
   // Ask the server again after it could not be reached.
   recheck: () => void;
+
+  // ---- THEIR OWN PASSWORD ----
+  // True for somebody signed in with a temporary password somebody else chose
+  // — a new account, or one reset from the Staff screen. The panel shows
+  // nothing but "set your own password" until it is false.
+  mustChangePassword: boolean;
+  // Needs the current password. Throws, with the server's reason, if refused.
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 };
 
 const SessionContext = createContext<SessionValue | null>(null);
@@ -74,12 +83,14 @@ const SessionContext = createContext<SessionValue | null>(null);
 export function AdminSessionProvider({ children }: { children: React.ReactNode }) {
   const [staff, setStaff] = useState<AdminStaff | null>(null);
   const [phase, setPhase] = useState<SessionPhase>('checking');
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   const check = useCallback(async () => {
     setPhase('checking');
     try {
       const found = await fetchSignedInStaff();
-      setStaff(found);
+      setStaff(found?.staff ?? null);
+      setMustChangePassword(found?.mustChangePassword ?? false);
       setPhase(found ? 'signed-in' : 'signed-out');
     } catch {
       // Could not reach the server at all. Deliberately NOT treated as signed
@@ -118,9 +129,17 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
   const enrol = useCallback(() => startMfaEnrolment(), []);
 
   const verifyCode = useCallback(async (code: string) => {
-    const { staff: signedIn } = await verifyMfaCode(code);
+    const { staff: signedIn, mustChangePassword: mustChange } = await verifyMfaCode(code);
     setStaff(signedIn);
+    setMustChangePassword(mustChange === true);
     setPhase('signed-in');
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await changeOwnPassword(currentPassword, newPassword);
+    // Only once the server has accepted it. Until then the temporary password is
+    // still the one that works, and the panel must not pretend otherwise.
+    setMustChangePassword(false);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -132,6 +151,7 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
       // sign-out request failed is the wrong way round.
     }
     setStaff(null);
+    setMustChangePassword(false);
     setPhase('signed-out');
   }, []);
 
@@ -148,8 +168,10 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
       verifyCode,
       signOut,
       recheck: () => void check(),
+      mustChangePassword,
+      changePassword,
     }),
-    [staff, phase, signIn, enrol, verifyCode, signOut, check],
+    [staff, phase, signIn, enrol, verifyCode, signOut, check, mustChangePassword, changePassword],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -218,18 +218,26 @@ function toneFor(action: AuditAction): 'neutral' | 'success' | 'warning' | 'dang
     action === 'account_deleted' ||
     action === 'verification_rejected' ||
     action === 'refund_denied' ||
-    action === 'deposit_claimed'
+    action === 'deposit_claimed' ||
+    action === 'staff_disabled'
   ) {
     return 'danger';
   }
-  if (action === 'points_adjusted' || action === 'settings_changed' || action === 'promotion_changed') {
+  if (
+    action === 'points_adjusted' ||
+    action === 'settings_changed' ||
+    action === 'promotion_changed' ||
+    action === 'staff_reset'
+  ) {
     return 'warning';
   }
   if (
     action === 'verification_approved' ||
     action === 'refund_approved' ||
     action === 'deposit_released' ||
-    action === 'dispute_resolved'
+    action === 'dispute_resolved' ||
+    action === 'staff_created' ||
+    action === 'staff_enabled'
   ) {
     return 'success';
   }

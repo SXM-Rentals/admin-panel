@@ -280,7 +280,7 @@ export default function DepositsLedgerPage() {
             ? { label: 'Amount to keep', max: acting.deposit.amount }
             : undefined
         }
-        onConfirm={async (reason, amount) => {
+        onConfirm={async (reason, { amount }) => {
           if (!acting) return;
           if (acting.action === 'claim') {
             // The dialog will not let this through without a valid amount.

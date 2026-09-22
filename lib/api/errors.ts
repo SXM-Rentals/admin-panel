@@ -78,6 +78,14 @@ export class NetworkError extends Error {
 // reaches this through useAsyncData, so there is one answer to "what do we say"
 // rather than one per screen.
 export function presentError(caught: unknown): string {
+  // AN ADDRESS THE SERVER DOES NOT HAVE is the one refusal worth rewording.
+  // Its own sentence — "There is nothing at this address" — is true and tells
+  // a member of staff nothing. It means the panel is asking for something the
+  // server has not been updated to do yet, so that is what is said.
+  if (caught instanceof ApiError && caught.code === 'route_not_found') {
+    return 'The SXM Rentals server does not offer this yet. It needs an update on the server before it will work.';
+  }
+
   // The server already wrote this for the person reading it. Passed through
   // untouched, on purpose — see the note at the top of this file.
   if (caught instanceof ApiError) return caught.message;

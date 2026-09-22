@@ -41,13 +41,32 @@ export type NextStep = 'enroll' | 'code';
 // refresh those letters would simply be missing. They are worked out here from
 // the name, the same way the server works them out when it creates an account,
 // so the corner looks the same however somebody arrived.
-export async function fetchSignedInStaff(): Promise<AdminStaff | null> {
+//
+// IT ALSO SAYS WHETHER THEY MUST SET THEIR OWN PASSWORD FIRST. An account made
+// or reset from the Staff screen starts with a temporary password somebody
+// else chose, and nothing else can be done until its owner replaces it. A
+// server that predates staff accounts does not send this at all, which means
+// nobody there has to.
+export type SignedIn = { staff: AdminStaff; mustChangePassword: boolean };
+
+export async function fetchSignedInStaff(): Promise<SignedIn | null> {
   try {
-    const me = await api.get<Omit<AdminStaff, 'avatarInitials'> & { avatarInitials?: string }>(
-      '/admin/me',
-      { expectUnauthorized: true },
-    );
-    return { ...me, avatarInitials: me.avatarInitials ?? initialsFor(me.name) };
+    const me = await api.get<{
+      id: string;
+      name: string;
+      email: string;
+      avatarInitials?: string;
+      mustChangePassword?: boolean;
+    }>('/admin/me', { expectUnauthorized: true });
+    return {
+      staff: {
+        id: me.id,
+        name: me.name,
+        email: me.email,
+        avatarInitials: me.avatarInitials ?? initialsFor(me.name),
+      },
+      mustChangePassword: me.mustChangePassword === true,
+    };
   } catch (caught) {
     if (isUnauthorized(caught)) return null;
     throw caught;
@@ -92,11 +111,26 @@ export async function startMfaEnrolment(): Promise<{ secret: string; otpauthUrl:
 // The only call that actually signs anybody in.
 export async function verifyMfaCode(
   code: string,
-): Promise<{ staff: AdminStaff; expiresAt: string }> {
-  return api.post<{ staff: AdminStaff; expiresAt: string }>('/admin/auth/mfa/verify', {
-    body: { code },
-    expectUnauthorized: true,
-  });
+): Promise<{ staff: AdminStaff; expiresAt: string; mustChangePassword?: boolean }> {
+  return api.post<{ staff: AdminStaff; expiresAt: string; mustChangePassword?: boolean }>(
+    '/admin/auth/mfa/verify',
+    { body: { code }, expectUnauthorized: true },
+  );
+}
+
+// ---- CHANGING YOUR OWN PASSWORD ----
+// Needs the current one, however the person came to be signed in: a session
+// left open on a shared machine should not be enough to take over the account.
+// On success the server signs this account out everywhere else, and this
+// session carries on.
+//
+// A WRONG CURRENT PASSWORD IS NOT A SIGNED-OUT SESSION. The server answers it
+// with a 400, not a 401, precisely so this call does not set off the panel's
+// "your session has ended" handling — a typo here should say "that is not your
+// current password" and nothing more. A genuine 401 still means what it always
+// means, which is why this is NOT asked for as expecting one.
+export async function changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api.post<void>('/admin/auth/password', { body: { currentPassword, newPassword } });
 }
 
 // ---- SIGNING OUT ----

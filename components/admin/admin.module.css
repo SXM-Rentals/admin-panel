@@ -229,6 +229,29 @@
   align-items: flex-start;
 }
 
+/* ---- CHANGING A PASSWORD ----
+   A narrow column: three boxes read top to bottom, not a form to scan across. */
+.passwordForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  max-width: 420px;
+}
+
+/* ---- A TEMPORARY PASSWORD, TO BE PASSED ON ----
+   Shown once, straight after an account is added or reset, in a face where
+   every character is distinct — it is going to be read out or retyped. */
+.handoverSecret {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--tile);
+  border: 1px solid var(--hairline);
+  word-break: break-all;
+}
+
 .dialogProblem > svg {
   margin-top: 2px;
   flex-shrink: 0;
