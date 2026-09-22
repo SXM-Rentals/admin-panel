@@ -281,10 +281,7 @@ export default function UserDetailPage() {
         description="Points are worth money, so this change is recorded in full."
         confirmLabel="Adjust points"
         reasonPlaceholder="e.g. Goodwill after the vehicle was delivered two hours late."
-        audit={{
-          action: 'points_adjusted',
-          subjectType: 'customer',
-          subjectId: user.id,
+        change={{
           subjectLabel: `${user.firstName} ${user.lastName}`,
           field: 'Rewards points',
           before: user.points.toLocaleString(),

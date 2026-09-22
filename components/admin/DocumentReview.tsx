@@ -152,10 +152,7 @@ export function DocumentReview({
             ? 'e.g. Policy is current to March 2027 and covers rental use.'
             : 'e.g. The policy expired on 14 June — please upload the renewal certificate.'
         }
-        audit={{
-          action: pending === 'approved' ? 'verification_approved' : 'verification_rejected',
-          subjectType,
-          subjectId,
+        change={{
           subjectLabel,
           field: name,
           before: style.label,

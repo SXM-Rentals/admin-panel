@@ -241,10 +241,7 @@ export default function PromotionsPage() {
         confirmLabel={changing?.next === 'paused' ? 'Pause code' : 'Resume code'}
         destructive={changing?.next === 'paused'}
         reasonPlaceholder="e.g. Partner list is being redone — pausing until the new one is agreed."
-        audit={{
-          action: 'promotion_changed',
-          subjectType: 'platform',
-          subjectId: changing?.promo.id ?? '',
+        change={{
           subjectLabel: `Promotion ${changing?.promo.code ?? ''}`,
           field: 'Promotion status',
           before: changing ? STATUS_STYLE[changing.promo.status].label : '',

@@ -307,10 +307,7 @@ export default function SettingsPage() {
         confirmLabel="Change commission"
         destructive
         reasonPlaceholder="e.g. Board decision of 3 September to reduce commission to 27% for the first year."
-        audit={{
-          action: 'settings_changed',
-          subjectType: 'platform',
-          subjectId: 'platform',
+        change={{
           subjectLabel: 'Platform settings',
           field: 'Commission rate',
           before: `${Math.round(loaded.commissionRate * 100)}%`,

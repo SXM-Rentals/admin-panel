@@ -96,13 +96,22 @@ afterEach(() => {
 // leaving timers running after the test has finished.
 //
 // A test that cares about a particular reply replaces this for itself.
+//
+// A FRESH REPLY EVERY TIME, NOT ONE REPLY SHARED. A reply's contents can only be
+// read once — the second attempt fails with "Body has already been read". An
+// earlier version handed the same reply to every request, so the second request
+// in any test failed, the panel treated that as a dropped connection and tried
+// again on its real five- and fifteen-second timers, and those timers went off
+// in the middle of whichever test ran next. Tests failed that had nothing wrong
+// with them. Building the reply inside the function gives every request its own.
 beforeEach(() => {
-  global.fetch = vi.fn().mockResolvedValue(
-    new Response(
-      JSON.stringify({
-        error: { code: 'unauthorized', message: 'Please sign in to the admin panel.' },
-      }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } },
-    ),
+  global.fetch = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          error: { code: 'unauthorized', message: 'Please sign in to the admin panel.' },
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } },
+      ),
   ) as unknown as typeof fetch;
 });

@@ -212,6 +212,28 @@
   gap: var(--space-sm);
 }
 
+/* ---- WHEN A CHANGE DID NOT GO THROUGH ----
+   Shown inside the reason dialog, which stays open, rather than as a toast that
+   disappears after a few seconds. The server's explanation is the thing the
+   person most needs to read — "a deposit is still being held for this account"
+   — so it sits where their eyes already are, above the reason they typed, and
+   stays there until they do something about it. Same shape as the warning
+   notes elsewhere, in the danger colour because the change was refused. */
+.dialogProblem {
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  border-left: 3px solid var(--danger);
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.dialogProblem > svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
 /* A row of two or three short fields inside a form, each with its own small
    heading above it. */
 .formRow {

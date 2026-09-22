@@ -7,13 +7,23 @@
 // keep a deposit, adjust somebody's points. It shows what is about to change,
 // asks why, and will not let the change through without an answer.
 //
-// THIS IS THE SINGLE MOST IMPORTANT COMPONENT IN THE PANEL, and the reason is
-// worth spelling out. The admin doc says every account change must be logged
-// with who, what, before, after and when. A log like that is only worth having
-// if it is complete, and completeness cannot be left to whoever writes the next
-// screen remembering to call the logging function. So it works the other way
-// round: the only way to make a change is through this dialog, and this dialog
-// always writes the entry. Forgetting becomes impossible rather than unlikely.
+// THIS IS THE SINGLE MOST IMPORTANT COMPONENT IN THE PANEL. The admin doc says
+// every account change must be logged with who, what, before, after and when,
+// and a log like that is only worth having if it is complete. So the only way to
+// make a change in this panel is through this dialog, and the dialog will not
+// send one without a written reason.
+//
+// WHO WRITES THE LOG ENTRY: THE SERVER, NOT THIS DIALOG. It used to write the
+// entry itself, into a list held in the browser that vanished on a refresh. Now
+// the reason goes to SXM Rentals with the change, and the server refuses any
+// change that arrives without one and records the entry itself. That is a
+// stronger guarantee than the old one: a log kept by the server cannot be
+// skipped by a screen that forgets, or lost by a browser that closes.
+//
+// It also means a change that FAILS leaves no entry — the server only records
+// what it actually did. The old dialog wrote the entry first, so a failed
+// attempt was still on record. That was worth having, and getting it back is a
+// job for the server rather than something to fake here.
 //
 // WHY THE REASON IS REQUIRED RATHER THAN ENCOURAGED: the reason is the only part
 // of an audit entry a computer cannot reconstruct afterwards. The values, the
@@ -24,16 +34,20 @@
 //
 // The bar is deliberately low: fifteen characters, which is a short sentence,
 // not an essay. The aim is to stop "ok" and "fixed", not to make people write.
+// The ceiling is the server's: a thousand characters.
 
 import React, { useEffect, useState } from 'react';
-import { Button, Icon, Sheet, Text, TextArea, useToast } from '@/components/ui';
-import { useAdminSession } from '@/lib/auth';
-import { recordAuditEntry } from '@/lib/audit';
-import type { AuditAction, AuditEntry } from '@/types';
+import { Button, Icon, Input, Sheet, Text, TextArea, useToast } from '@/components/ui';
+import { ApiError, presentError } from '@/lib/api/errors';
+import { money } from '@/lib/format';
 import styles from './admin.module.css';
 
 // The shortest reason worth recording. See the note above.
 const MIN_REASON = 15;
+// The longest the server will accept. Anything over it is refused outright, so
+// the box simply stops accepting more rather than letting somebody write an
+// essay that is then thrown back at them.
+const MAX_REASON = 1000;
 
 export type ReasonDialogProps = {
   open: boolean;
@@ -55,21 +69,37 @@ export type ReasonDialogProps = {
   // editable, never submitted on its own.
   reasonPlaceholder?: string;
 
-  // ---- WHAT GETS WRITTEN TO THE LOG ----
-  audit: {
-    action: AuditAction;
-    subjectType: AuditEntry['subjectType'];
-    subjectId: string;
+  // ---- WHAT IS ABOUT TO CHANGE ----
+  // Shown in the dialog, so somebody clicking through five of these in a row can
+  // still see which one they are on. The values as they should READ: "Explorer"
+  // rather than 2, "$500" rather than 50000.
+  change: {
     subjectLabel: string;
     field: string;
     before: string;
     after: string;
   };
 
-  // What actually performs the change. Called only after the reason passes, and
-  // only after the audit entry is written, so a failure here leaves a record
-  // that somebody tried — which is the safer way round for a money action.
-  onConfirm: (reason: string) => Promise<void> | void;
+  // ---- AN AMOUNT OF MONEY, FOR THE ONE CHANGE THAT NEEDS ONE ----
+  // Keeping a security deposit can mean keeping part of it: $240 against a
+  // kerbed wheel, the rest returned. The server needs the figure, and it can
+  // never be more than was held. This is deliberately one named, bounded thing
+  // rather than a way to add any field to the dialog — a general-purpose slot
+  // is how a dialog built to guarantee one rule slowly turns into a form.
+  //
+  // The box starts EMPTY on purpose. Filled in with the whole deposit, a person
+  // pressing Enter out of habit would keep all of somebody's money.
+  amount?: {
+    label: string;
+    // The most that can be entered: what is actually being held.
+    max: number;
+    hint?: string;
+  };
+
+  // What actually performs the change. Called only once the reason (and the
+  // amount, if there is one) passes. If it throws, the dialog stays open with
+  // everything still typed, and says what went wrong.
+  onConfirm: (reason: string, amount?: number) => Promise<void> | void;
 };
 
 export function ReasonDialog({
@@ -80,15 +110,17 @@ export function ReasonDialog({
   confirmLabel,
   destructive = false,
   reasonPlaceholder = 'Why are you making this change?',
-  audit,
+  change,
+  amount,
   onConfirm,
 }: ReasonDialogProps) {
-  const { staff } = useAdminSession();
   const { showToast } = useToast();
 
   const [reason, setReason] = useState('');
+  const [amountText, setAmountText] = useState('');
   const [touched, setTouched] = useState(false);
   const [working, setWorking] = useState(false);
+  const [problem, setProblem] = useState<string | undefined>(undefined);
 
   // Empty the box each time the dialog opens. Without this, the reason typed for
   // the last vehicle is sitting there ready to be submitted against the next
@@ -96,43 +128,69 @@ export function ReasonDialog({
   useEffect(() => {
     if (open) {
       setReason('');
+      setAmountText('');
       setTouched(false);
       setWorking(false);
+      setProblem(undefined);
     }
   }, [open]);
 
   const tooShort = reason.trim().length < MIN_REASON;
 
+  // The amount, if one is asked for: a positive figure, in dollars and cents,
+  // no more than is being held.
+  //
+  // CHECKED AS WRITTEN, NOT AS A NUMBER. The obvious test for "no more than two
+  // decimal places" — multiply by a hundred and see if it is whole — is wrong in
+  // a way that only shows on real amounts: 2.3 × 100 comes out as
+  // 229.99999999999997 in a computer, and $2.30 would be refused. So the text
+  // itself is checked, which is exactly what the person typed.
+  const cleanedAmount = amountText.replace(/[$,\s]/g, '');
+  const parsedAmount = amount ? Number(cleanedAmount) : undefined;
+  const amountProblem = !amount
+    ? undefined
+    : cleanedAmount === ''
+      ? 'Enter how much to keep.'
+      : !/^\d+(\.\d{1,2})?$/.test(cleanedAmount)
+        ? 'Enter an amount in dollars and cents, like 240 or 240.50.'
+        : (parsedAmount ?? 0) <= 0
+          ? 'Enter an amount more than nothing.'
+          : (parsedAmount ?? 0) > amount.max
+            ? `That is more than the ${money(amount.max)} being held.`
+            : undefined;
+
+  const blocked = tooShort || amountProblem !== undefined;
+
   const submit = async () => {
     setTouched(true);
-    if (tooShort || !staff) return;
+    if (blocked) return;
 
     setWorking(true);
+    setProblem(undefined);
 
-    // The record first, then the change. If the change fails there is still a
-    // note that it was attempted, by whom and why.
-    recordAuditEntry({
-      staffId: staff.id,
-      staffName: staff.name,
-      ...audit,
-      reason: reason.trim(),
-    });
-
-    // IF THE CHANGE FAILS, SAY SO AND STAY OPEN. This used to close the dialog
-    // and announce "Done" whatever happened, because nothing was catching a
-    // rejected save — so a change that never landed looked exactly like one that
-    // did. On a screen that approves refunds and keeps deposits, that is the
-    // worst possible failure mode: the person walks away believing money moved.
-    //
-    // Now the dialog stays where it is with the reason still typed, so the
-    // action can simply be tried again. The audit entry above is already
-    // written, which is the right way round — a record of an attempt is useful,
-    // and a silent failure is not.
     try {
-      await onConfirm(reason.trim());
-    } catch {
+      await onConfirm(reason.trim(), amount ? parsedAmount : undefined);
+    } catch (caught) {
       setWorking(false);
-      showToast('That did not go through', 'Nothing was changed. The attempt is in the audit log — please try again.');
+
+      // IF THE CHANGE FAILS, SAY SO AND STAY OPEN. A dialog that closed and
+      // announced "Done" whatever happened would make a change that never landed
+      // look exactly like one that did — on a screen that approves refunds and
+      // keeps deposits, the worst possible failure. So it stays where it is, with
+      // the reason still typed, and says what happened.
+      //
+      // THE TWO KINDS OF FAILURE ARE WORDED DIFFERENTLY, and the difference is
+      // about money. When the server answers "no", nothing changed and it has
+      // said why — "a deposit is still being held for this account" — so that is
+      // shown exactly as written. When the connection drops instead, we cannot
+      // know: the change may have landed and only the reply been lost. Telling
+      // somebody "nothing was changed" then could be false, so the panel asks
+      // them to check before trying again.
+      setProblem(
+        caught instanceof ApiError
+          ? `${presentError(caught)} Nothing was changed.`
+          : 'We could not confirm whether this went through — the connection dropped before SXM Rentals answered. Refresh the page and check before trying again.',
+      );
       return;
     }
 
@@ -155,7 +213,7 @@ export function ReasonDialog({
             size="md"
             onClick={submit}
             loading={working}
-            disabled={tooShort}
+            disabled={blocked}
           />
         </>
       }
@@ -172,21 +230,44 @@ export function ReasonDialog({
             they are on. */}
         <div className={styles.changePreview}>
           <Text variant="caption" tone="ink3" as="p" raw>
-            {audit.field}
+            {change.field}
           </Text>
           <div className={styles.changeRow}>
             <Text variant="label" tone="ink2" as="span" raw>
-              {audit.before}
+              {change.before}
             </Text>
             <Icon name="arrow-forward" size={15} color="var(--ink3)" />
             <Text variant="label" tone={destructive ? 'danger' : 'success'} as="span" raw>
-              {audit.after}
+              {change.after}
             </Text>
           </div>
           <Text variant="small" tone="ink3" as="p" raw>
-            {audit.subjectLabel}
+            {change.subjectLabel}
           </Text>
         </div>
+
+        {problem ? (
+          <div className={styles.dialogProblem} role="alert">
+            <Icon name="alert-circle-outline" size={16} color="var(--danger)" />
+            <Text variant="small" as="p" raw>
+              {problem}
+            </Text>
+          </div>
+        ) : null}
+
+        {amount ? (
+          <Input
+            label={amount.label}
+            inputMode="decimal"
+            placeholder={`Up to ${money(amount.max)}`}
+            value={amountText}
+            onChange={(event) => setAmountText(event.target.value)}
+            onBlur={() => setTouched(true)}
+            error={touched ? amountProblem : undefined}
+            hint={amount.hint ?? `${money(amount.max)} is being held. Whatever is not kept goes back to the customer.`}
+            required
+          />
+        ) : null}
 
         <TextArea
           label="Reason"
@@ -195,6 +276,8 @@ export function ReasonDialog({
           onBlur={() => setTouched(true)}
           placeholder={reasonPlaceholder}
           rows={3}
+          maxLength={MAX_REASON}
+          showCount
           required
           error={touched && tooShort ? `Please give a reason of at least ${MIN_REASON} characters.` : undefined}
           hint={

@@ -44,7 +44,11 @@ export type EditableRowProps = {
   emptyText?: string;
   // A line under the box explaining anything that follows from the change.
   hint?: string;
-  onSave: (next: string) => Promise<void> | void;
+  // Given the new value AND the reason typed into the dialog. The reason used to
+  // stop here — the dialog kept it for its own log entry and the save never saw
+  // it. Now the server writes the log entry, so the save has to carry the reason
+  // there with the change, or the server refuses it.
+  onSave: (next: string, reason: string) => Promise<void> | void;
 };
 
 export function EditableRow({
@@ -149,17 +153,14 @@ export function EditableRow({
         }
         confirmLabel="Save change"
         reasonPlaceholder="e.g. Customer could not receive booking confirmations; new address confirmed by phone."
-        audit={{
-          action: 'account_updated',
-          subjectType,
-          subjectId,
+        change={{
           subjectLabel,
           field: auditField ?? label,
           before: value ? readable(value) : emptyText,
           after: readable(draft.trim()),
         }}
-        onConfirm={async () => {
-          await onSave(draft.trim());
+        onConfirm={async (reason) => {
+          await onSave(draft.trim(), reason);
           setEditing(false);
         }}
       />

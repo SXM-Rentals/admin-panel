@@ -190,10 +190,7 @@ export default function DisputeDetailPage() {
         description="Write what was found and what was decided. This is the record anybody asking about it later will read."
         confirmLabel="Resolve dispute"
         reasonPlaceholder="e.g. Pickup photographs show the tank three-quarters full at collection. Charge reduced to $48 and the business agreed. Both sides notified."
-        audit={{
-          action: 'dispute_resolved',
-          subjectType: 'booking',
-          subjectId: dispute.id,
+        change={{
           subjectLabel: `${dispute.reference} · ${dispute.subject}`,
           field: 'Dispute',
           before: style.label,

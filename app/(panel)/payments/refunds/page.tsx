@@ -244,10 +244,7 @@ export default function RefundsQueuePage() {
             ? 'e.g. Business confirmed the vehicle was unavailable at pickup.'
             : 'e.g. Rental ran to completion with no fault reported at the time.'
         }
-        audit={{
-          action: deciding?.decision === 'approved' ? 'refund_approved' : 'refund_denied',
-          subjectType: 'payment',
-          subjectId: deciding?.refund.id ?? '',
+        change={{
           subjectLabel: `Refund on ${deciding?.refund.bookingRef ?? ''} · ${deciding?.refund.customerName ?? ''}`,
           field: 'Refund request',
           before: `Waiting · ${money(deciding?.refund.amount ?? 0)}`,

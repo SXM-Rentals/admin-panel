@@ -128,10 +128,7 @@ export function CloseAccount({
         confirmLabel="Close account"
         destructive
         reasonPlaceholder="e.g. Customer asked in writing for their account to be closed. No open bookings and no deposit held at the time of closure."
-        audit={{
-          action: 'account_deleted',
-          subjectType,
-          subjectId,
+        change={{
           subjectLabel,
           field: 'Account',
           before: currentState,

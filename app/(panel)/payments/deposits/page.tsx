@@ -253,10 +253,7 @@ export default function DepositsLedgerPage() {
             ? 'e.g. Kerbed alloy on the front nearside, photographed at return and agreed with the renter. $240 retained against the repair quote, $260 returned.'
             : 'e.g. Vehicle returned on time and undamaged.'
         }
-        audit={{
-          action: acting?.action === 'claim' ? 'deposit_claimed' : 'deposit_released',
-          subjectType: 'booking',
-          subjectId: acting?.deposit.id ?? '',
+        change={{
           subjectLabel: `${acting?.deposit.bookingRef ?? ''} · ${acting?.deposit.customerName ?? ''}`,
           field: 'Security deposit',
           before: `Held · ${money(acting?.deposit.amount ?? 0)}`,
