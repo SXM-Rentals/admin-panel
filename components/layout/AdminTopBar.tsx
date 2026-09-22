@@ -241,7 +241,9 @@ export function AdminTopBar({
         <span className={styles.bellWrap}>
           <IconButton
             icon="notifications-outline"
-            label={`${queueCount} things waiting`}
+            // Neutral at nought: it may mean nothing is waiting, or that the
+            // count could not be fetched, and it should not claim either.
+            label={queueCount > 0 ? `${queueCount} things waiting` : 'Action Queue'}
             variant="plain"
             onClick={() => router.push('/queue')}
           />

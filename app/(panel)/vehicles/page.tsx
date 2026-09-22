@@ -2,13 +2,17 @@
 
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
-// WHAT THIS FILE DOES: Every vehicle across every rental business, and the state
-// of the three documents each one needs before it can be listed.
+// WHAT THIS FILE DOES: Every vehicle across every rental business, and whether
+// each one is listed for customers to book.
 //
-// THE DOCUMENTS COLUMN COUNTS RATHER THAN SUMMARISING. "2 of 3 read" tells
-// somebody there is work here and roughly how much; a single pill saying
-// "Pending" does not. On a screen whose main job is working through a queue, the
-// count is the useful number.
+// THERE IS NO DOCUMENTS COLUMN ANY MORE, and that is a deliberate trade. It used
+// to say "2 of 3 read" on every row. The server sends a vehicle's paperwork only
+// when that one vehicle is opened, not with the list — sending every document
+// for every car just to draw a list would be most of the answer and none of the
+// point. Asking for each car separately to fill the column would be one request
+// per row. So the work of reading documents is found where it already lives: in
+// the Action Queue, where every document waiting to be read has its own line,
+// and on each vehicle's own screen.
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -16,22 +20,21 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, vehicleClassLabels } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { LISTING_STYLE } from '@/components/admin/shared';
-import { Button, MockBanner, StatusPill, Text } from '@/components/ui';
+import { Button, StatusPill, Text } from '@/components/ui';
 import type { AdminVehicle } from '@/types';
 
 type ListingFilter = 'all' | AdminVehicle['listingStatus'];
-type DocFilter = 'all' | 'needs_reading';
 
 export default function VehiclesPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [listing, setListing] = useState<ListingFilter>('all');
-  const [docs, setDocs] = useState<DocFilter>('all');
 
-  const { data: vehicles, loading } = useAsyncData(() => apiClient.listVehicles(), []);
+  const { data: vehicles, loading, error, refresh } = useAsyncData(() => apiClient.listVehicles(), []);
 
   const rows = useMemo(() => {
     const all = vehicles ?? [];
@@ -39,15 +42,12 @@ export default function VehiclesPage() {
 
     return all.filter((vehicle) => {
       if (listing !== 'all' && vehicle.listingStatus !== listing) return false;
-      if (docs === 'needs_reading' && !vehicle.documents.some((d) => d.status === 'pending')) {
-        return false;
-      }
       if (!q) return true;
       return `${vehicle.make} ${vehicle.model} ${vehicle.reference} ${vehicle.providerName}`
         .toLowerCase()
         .includes(q);
     });
-  }, [vehicles, search, listing, docs]);
+  }, [vehicles, search, listing]);
 
   const columns: Column<AdminVehicle>[] = [
     {
@@ -80,24 +80,6 @@ export default function VehiclesPage() {
       ),
     },
     {
-      id: 'documents',
-      header: 'Documents',
-      sortValue: (v) => v.documents.filter((d) => d.status === 'pending').length,
-      cell: (v) => {
-        const pending = v.documents.filter((d) => d.status === 'pending').length;
-        const rejected = v.documents.filter((d) => d.status === 'rejected').length;
-        const read = v.documents.length - pending;
-
-        if (rejected > 0) {
-          return <StatusPill label={`${rejected} rejected`} tone="danger" />;
-        }
-        if (pending > 0) {
-          return <StatusPill label={`${read} of ${v.documents.length} read`} tone="warning" />;
-        }
-        return <StatusPill label="All read" tone="success" />;
-      },
-    },
-    {
       id: 'listing',
       header: 'Listing',
       sortValue: (v) => v.listingStatus,
@@ -118,14 +100,15 @@ export default function VehiclesPage() {
   const countBy = (predicate: (v: AdminVehicle) => boolean) =>
     (vehicles ?? []).filter(predicate).length;
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Vehicles" what="The vehicles" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
         title="Vehicles"
-        description="Every vehicle on the platform, and the registration, insurance and roadworthiness documents that gate it."
+        description="Every vehicle on the platform, and whether customers can book it. Each vehicle's documents are on its own screen; the ones waiting to be read are in the Action Queue."
       />
-
-      <MockBanner />
 
       <PageCard
         title="Fleet"
@@ -147,19 +130,6 @@ export default function VehiclesPage() {
               { value: 'suspended', label: 'Suspended', count: countBy((v) => v.listingStatus === 'suspended') },
             ]}
           />
-          <FilterChips
-            label="Documents"
-            value={docs}
-            onChange={setDocs}
-            options={[
-              { value: 'all', label: 'Any' },
-              {
-                value: 'needs_reading',
-                label: 'Waiting to Be Read',
-                count: countBy((v) => v.documents.some((d) => d.status === 'pending')),
-              },
-            ]}
-          />
         </FilterBar>
 
         <DataTable
@@ -168,7 +138,7 @@ export default function VehiclesPage() {
           rowKey={(v) => v.id}
           rowMuted={(v) => v.listingStatus === 'suspended'}
           loading={loading}
-          initialSort={{ columnId: 'documents', direction: 'desc' }}
+          initialSort={{ columnId: 'listing', direction: 'asc' }}
           emptyTitle="No vehicles match"
           emptyMessage="Try a shorter search, or clear the filters above."
           rowActions={(v) => (

@@ -83,26 +83,20 @@ export type AuditEntry = {
 export type VehicleDocumentKind = 'registration' | 'insurance' | 'roadworthiness';
 
 export type VehicleDocument = {
+  // The document's own id. A review is sent against this, not against the
+  // vehicle and the kind of document — a car can have had two insurance
+  // certificates, and "the insurance one" does not say which was read.
+  id: string;
   kind: VehicleDocumentKind;
   status: 'pending' | 'approved' | 'rejected';
   fileName: string;
   uploadedAt: string;
+  // A plain date, "2027-03-31", where the document has one.
   expiresAt?: string;
   // Filled in only when rejected, and always required at that point.
   reason?: string;
-  reviewedBy?: string;
+  // When it was read. The server does not say who by — that is in the audit log.
   reviewedAt?: string;
-};
-
-// Where a rental business has got to in being able to receive money. Stripe
-// Connect will not send anything anywhere until this reads "active".
-export type ProviderPayoutAccount = {
-  stripeAccountId?: string;
-  status: 'not_started' | 'pending' | 'active' | 'restricted';
-  // What Stripe is still waiting for, in plain words.
-  outstanding: string[];
-  payoutsEnabled: boolean;
-  country: string;
 };
 
 // The provider record as STAFF see it — the public profile, plus everything a
@@ -130,8 +124,12 @@ export type AdminProvider = Provider & {
   // exports or shares provider records should think twice about this one field.
   ownerPhone: string;
   verificationStatus: VerificationStatus;
-  documents: VehicleDocument[];
-  payoutAccount: ProviderPayoutAccount;
+  // NOT HERE, ON PURPOSE: the business's own paperwork and its Stripe payout
+  // account. The panel used to show both. The server does not send either — it
+  // has no table for a business's documents, and while it does keep the payout
+  // account's status, it does not hand that to the admin panel yet. Both are
+  // backend jobs; until then the screens say so rather than showing something
+  // made up.
   vehicleCount: number;
   // Lifetime figures, so a name in the list carries some weight behind it.
   bookingCount: number;
@@ -152,8 +150,7 @@ export type AdminUser = User & {
   deletedAt?: string;
 };
 
-// The vehicle record as STAFF see it: the listing, who owns it, and whether its
-// paperwork is in order.
+// The vehicle record as STAFF see it: the listing and who owns it.
 export type AdminVehicle = {
   id: string;
   reference: string;
@@ -166,6 +163,12 @@ export type AdminVehicle = {
   dailyRate: number;
   side: 'dutch' | 'french';
   listingStatus: 'live' | 'pending_review' | 'suspended';
+};
+
+// ONE vehicle, opened on its own, also carries its paperwork. The list of all
+// vehicles does not — sending every document for every car, just to draw a list,
+// would be most of the answer and none of the point.
+export type AdminVehicleDetail = AdminVehicle & {
   documents: VehicleDocument[];
 };
 
@@ -235,13 +238,39 @@ export type DepositLedgerEntry = {
   providerName: string;
   amount: number;
   status: DepositStatus;
-  authorizedAt: string;
+  // Empty for a deposit that has never been taken — there is no moment of
+  // authorising to point at yet.
+  authorizedAt: string | null;
   releasedAt?: string;
   claimedAt?: string;
   // Required whenever a deposit is claimed rather than returned. Keeping a
   // deposit without a written reason is the single most disputable thing this
   // platform can do, so the shape makes the reason impossible to forget.
   claimReason?: string;
+  // How much of it was kept. Keeping part of a deposit is allowed — $240
+  // against a kerbed wheel, the rest returned — so the amount held and the
+  // amount kept are two different numbers.
+  claimedAmount?: number;
+};
+
+// ---- PAYOUTS ----
+// Money sent on to a rental business for a period of trading: what their
+// bookings took, less SXM Rentals' commission. Read only — the panel shows
+// them, Stripe sends them.
+export type AdminPayout = {
+  id: string;
+  reference: string;
+  providerName: string;
+  // What the business actually received: grossAmount less commission.
+  amount: number;
+  grossAmount: number;
+  commission: number;
+  bookingCount: number;
+  // Plain dates, "2026-09-01".
+  periodStart: string;
+  periodEnd: string;
+  status: 'paid' | 'pending' | 'processing';
+  paidOn?: string;
 };
 
 // ---- DISPUTES ----
@@ -265,45 +294,13 @@ export type DisputeCase = {
   resolvedAt?: string;
 };
 
-// ---- PROMOTIONS ----
-export type PromoCode = {
-  id: string;
-  code: string;
-  description: string;
-  kind: 'percent' | 'fixed';
-  value: number;
-  startsAt: string;
-  endsAt: string;
-  status: 'active' | 'scheduled' | 'paused' | 'expired';
-  usageLimit?: number;
-  usedCount: number;
-  // Who it applies to. "all" means everybody.
-  appliesTo: 'all' | 'local' | 'tourist' | 'first_booking';
-};
-
-// ---- REWARDS CONFIGURATION ----
-// The draft table from the Overview doc, held as data so it can be tuned here
-// rather than living in the code. The doc is explicit that these numbers are a
-// first pass and want modelling against the roughly 30% platform margin before
-// anyone relies on them.
-export type RewardsConfig = {
-  tiers: { tier: RewardTier; label: string; threshold: number; benefits: string[] }[];
-  earning: { id: string; activity: string; points: number | null; note?: string }[];
-};
-
-// ---- PLATFORM SETTINGS ----
-export type PlatformSettings = {
-  commissionRate: number; // 0.3 = the 30% the Overview doc works from
-  kycProvider: 'stripe_identity' | 'persona' | 'veriff' | 'didit';
-  kycCostPerCheck: number;
-  // Whether a passport check and a licence check bill as one session or two. The
-  // Overview doc flags this as the thing that doubles, or does not double, the
-  // per-customer cost — so it is a setting to be confirmed, not an assumption
-  // buried in a spreadsheet.
-  kycBundledDocuments: boolean;
-  payoutEntity: 'us_llc' | 'french_side' | 'dutch_side';
-  featureFlags: { id: string; label: string; description: string; enabled: boolean }[];
-};
+// ---- PLATFORM SETTINGS: THE TWO CHOICES THE SERVER KNOWS ABOUT ----
+// The server keeps platform settings but does not yet let the panel read or
+// change them. These two lists are its own — the identity-check companies and
+// the legal entities Stripe can pay out from, exactly as the server spells them
+// — so the wording for them in lib/labels.ts is ready for when it does.
+export type KycProvider = 'stripe_identity' | 'persona' | 'veriff' | 'didit';
+export type PayoutEntity = 'us_llc' | 'french_side' | 'dutch_side';
 
 // ---- THE DASHBOARD ----
 // The headline figures, worked out once so that the dashboard, the payments
@@ -328,6 +325,10 @@ export type PlatformSummary = {
   gmv: number;
   paidOutToProviders: number;
   commissionRetained: number;
+  // THE NAME SAYS "IN RANGE", AND IT IS ALWAYS ALL-TIME. The server sends this
+  // field by this name but does not yet take a range: every figure in this
+  // summary covers the whole of SXM Rentals to date. The name is the server's,
+  // so it is kept; the dashboard labels it truthfully instead.
   bookingsInRange: number;
   // Held right now across all live rentals. Shown on its own, deliberately apart
   // from the revenue figures, and labelled as not being ours.
@@ -336,8 +337,17 @@ export type PlatformSummary = {
   verificationsWaiting: number;
   disputesOpen: number;
   refundsPending: number;
-  // For the trend chart on the dashboard.
+  // For the trend chart on the dashboard: the last six months.
   bookingTrend: { label: string; bookings: number; gmv: number }[];
+};
+
+// One bar on the analytics charts: a day, a week, a month, a quarter or a year,
+// whichever the server chose for the span asked about. See lib/analytics.ts.
+export type SeriesPoint = {
+  label: string;
+  gmv: number;
+  bookings: number;
+  newUsers: number;
 };
 
 // One row in the Action Queue — the three separate queues flattened into a
@@ -379,7 +389,3 @@ export type PlaybookRepo = {
   purpose: string;
   stack: string;
 };
-
-// The date range every money screen filters by. Defined once so the dashboard,
-// the analytics page and the ledgers all offer the same choices.
-export type DateRangeKey = 'month' | 'quarter' | 'year' | 'all';

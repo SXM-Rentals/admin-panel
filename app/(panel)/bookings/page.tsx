@@ -22,10 +22,11 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, shortDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips, FilterSelect } from '@/components/admin/FilterBar';
 import { BOOKING_STYLE, DEPOSIT_STYLE, Note } from '@/components/admin/shared';
-import { Button, MockBanner, StatusPill, Text } from '@/components/ui';
+import { Button, StatusPill, Text } from '@/components/ui';
 import filterStyles from '@/components/admin/admin.module.css';
 import type { AdminBooking, BookingStatus } from '@/types';
 
@@ -48,7 +49,7 @@ function BookingsList() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
-  const { data: bookings, loading } = useAsyncData(() => apiClient.listBookings(), []);
+  const { data: bookings, loading, error, refresh } = useAsyncData(() => apiClient.listBookings(), []);
   const { data: providers } = useAsyncData(() => apiClient.listProviders(), []);
 
   const rows = useMemo(() => {
@@ -135,14 +136,15 @@ function BookingsList() {
   const countBy = (predicate: (b: AdminBooking) => boolean) =>
     (bookings ?? []).filter(predicate).length;
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Bookings" what="The bookings" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
         title="Bookings"
         description="Every booking on the platform, both sides of it — who rented what, from whom, and what happened to the money."
       />
-
-      <MockBanner />
 
       <PageCard
         title="All bookings"

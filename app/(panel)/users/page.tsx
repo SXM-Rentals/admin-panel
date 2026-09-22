@@ -21,10 +21,11 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, shortDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { VerificationPill } from '@/components/admin/shared';
-import { Button, MockBanner, StatusPill, Text } from '@/components/ui';
+import { Button, StatusPill, Text } from '@/components/ui';
 import type { AdminUser, VerificationStatus } from '@/types';
 
 type StatusFilter = 'all' | VerificationStatus;
@@ -36,7 +37,7 @@ export default function UsersPage() {
   const [status, setStatus] = useState<StatusFilter>('all');
   const [accountType, setAccountType] = useState<TypeFilter>('all');
 
-  const { data: users, loading } = useAsyncData(() => apiClient.listUsers(), []);
+  const { data: users, loading, error, refresh } = useAsyncData(() => apiClient.listUsers(), []);
 
   const rows = useMemo(() => {
     const all = users ?? [];
@@ -118,6 +119,9 @@ export default function UsersPage() {
     },
   ];
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Users" what="The customers" error={error} onRetry={refresh} />;
+
   const countBy = (predicate: (u: AdminUser) => boolean) => (users ?? []).filter(predicate).length;
 
   return (
@@ -126,8 +130,6 @@ export default function UsersPage() {
         title="Users"
         description="Every customer account — identity checks, resident or visitor, and where they are in the rewards programme."
       />
-
-      <MockBanner />
 
       <PageCard
         title="Customers"

@@ -25,22 +25,26 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, longDate, relativeDay } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { ReasonDialog } from '@/components/admin/ReasonDialog';
 import { InfoRow, InfoRows, Note, VerificationPill, YesNo } from '@/components/admin/shared';
 import { EditableRow } from '@/components/admin/EditableRow';
 import { CloseAccount } from '@/components/admin/CloseAccount';
-import { Button, MockBanner, Skeleton, StatusPill, Text } from '@/components/ui';
+import { Button, Skeleton, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
 
 export default function UserDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
 
-  const { data: user, loading, refresh } = useAsyncData(() => apiClient.getUser(id), [id]);
+  const { data: user, loading, error, refresh } = useAsyncData(() => apiClient.getUser(id), [id]);
 
   // The number typed into the box, and whether the dialog is open.
   const [newPoints, setNewPoints] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Could not be fetched is not the same as "no such customer". See LoadFailed.
+  if (error) return <LoadFailed title="Customer" what="This customer" error={error} onRetry={refresh} />;
 
   if (loading) return <Skeleton height={420} />;
 
@@ -55,7 +59,9 @@ export default function UserDetailPage() {
 
   const fullName = `${user.firstName} ${user.lastName}`;
   const parsedPoints = Number(newPoints);
-  const pointsValid = newPoints !== '' && Number.isFinite(parsedPoints) && parsedPoints >= 0;
+  // A whole number of points, not below nothing. The server only takes whole
+  // points, so 12.5 is stopped here rather than refused there.
+  const pointsValid = newPoints !== '' && Number.isInteger(parsedPoints) && parsedPoints >= 0;
 
   return (
     <>
@@ -66,8 +72,6 @@ export default function UserDetailPage() {
           : `Customer since ${longDate(user.memberSince)} · last active ${relativeDay(user.lastActiveAt)}`}
         actions={<Button label="Back to Users" href="/users" variant="ghost" size="md" />}
       />
-
-      <MockBanner />
 
       <div className={styles.detailGrid}>
         {/* ---- THE RECORD ---- */}
@@ -80,22 +84,18 @@ export default function UserDetailPage() {
               <EditableRow
                 label="First name"
                 value={user.firstName}
-                subjectType="customer"
-                subjectId={user.id}
                 subjectLabel={fullName}
-                onSave={async (next) => {
-                  await apiClient.updateUser(user.id, 'firstName', next);
+                onSave={async (next, reason) => {
+                  await apiClient.updateUser(user.id, 'firstName', next, reason);
                   refresh();
                 }}
               />
               <EditableRow
                 label="Last name"
                 value={user.lastName}
-                subjectType="customer"
-                subjectId={user.id}
                 subjectLabel={fullName}
-                onSave={async (next) => {
-                  await apiClient.updateUser(user.id, 'lastName', next);
+                onSave={async (next, reason) => {
+                  await apiClient.updateUser(user.id, 'lastName', next, reason);
                   refresh();
                 }}
               />
@@ -103,11 +103,9 @@ export default function UserDetailPage() {
                 label="Email"
                 value={user.email}
                 inputType="email"
-                subjectType="customer"
-                subjectId={user.id}
                 subjectLabel={fullName}
-                onSave={async (next) => {
-                  await apiClient.updateUser(user.id, 'email', next);
+                onSave={async (next, reason) => {
+                  await apiClient.updateUser(user.id, 'email', next, reason);
                   refresh();
                 }}
               />
@@ -115,11 +113,9 @@ export default function UserDetailPage() {
                 label="Phone"
                 value={user.phone}
                 inputType="tel"
-                subjectType="customer"
-                subjectId={user.id}
                 subjectLabel={fullName}
-                onSave={async (next) => {
-                  await apiClient.updateUser(user.id, 'phone', next);
+                onSave={async (next, reason) => {
+                  await apiClient.updateUser(user.id, 'phone', next, reason);
                   refresh();
                 }}
               />
@@ -131,24 +127,28 @@ export default function UserDetailPage() {
                   { value: 'local', label: 'Local Resident' },
                   { value: 'tourist', label: 'Tourist' },
                 ]}
-                subjectType="customer"
-                subjectId={user.id}
                 subjectLabel={fullName}
-                hint="Moving somebody to Tourist also removes their Islander status, because Islander is a residency flag and they would no longer be registered as a resident."
-                onSave={async (next) => {
-                  await apiClient.updateUser(user.id, 'accountType', next);
+                hint="This changes the account type only. If they are no longer a resident, change Islander status below as well — it does not follow on its own."
+                onSave={async (next, reason) => {
+                  await apiClient.updateUser(user.id, 'accountType', next, reason);
                   refresh();
                 }}
               />
-              <InfoRow
+              {/* Its own edit, logged on its own. It used to change by itself
+                  when somebody was moved to Tourist; the server changes one
+                  field at a time, so it is set here, deliberately. */}
+              <EditableRow
                 label="Islander status"
-                value={
-                  user.isIslander ? (
-                    <StatusPill label="Islander" tone="success" dot={false} />
-                  ) : (
-                    'Not an Islander'
-                  )
-                }
+                value={user.isIslander ? 'yes' : 'no'}
+                options={[
+                  { value: 'yes', label: 'Islander' },
+                  { value: 'no', label: 'Not an Islander' },
+                ]}
+                subjectLabel={fullName}
+                onSave={async (next, reason) => {
+                  await apiClient.updateUser(user.id, 'isIslander', next === 'yes', reason);
+                  refresh();
+                }}
               />
               <InfoRow label="Member since" value={longDate(user.memberSince)} />
             </InfoRows>
@@ -201,15 +201,12 @@ export default function UserDetailPage() {
               on a record somebody opened to read. */}
           <PageCard title="Close Account">
             <CloseAccount
-              subjectType="customer"
-              subjectId={user.id}
               subjectLabel={fullName}
               currentState={`Active · ${user.tier.charAt(0).toUpperCase() + user.tier.slice(1)} · ${user.points.toLocaleString()} points`}
               alreadyClosed={Boolean(user.deletedAt)}
               closedOn={user.deletedAt ? longDate(user.deletedAt) : undefined}
-              check={() => apiClient.canCloseUser(user.id)}
-              onClose={async () => {
-                await apiClient.closeUser(user.id);
+              onClose={async (reason) => {
+                await apiClient.closeUser(user.id, reason);
                 refresh();
               }}
             />
@@ -287,8 +284,9 @@ export default function UserDetailPage() {
           before: user.points.toLocaleString(),
           after: pointsValid ? parsedPoints.toLocaleString() : '—',
         }}
-        onConfirm={async () => {
-          await apiClient.adjustUserPoints(user.id, parsedPoints);
+        onConfirm={async (reason) => {
+          // Sent as the difference from the current balance — see adjustUserPoints.
+          await apiClient.adjustUserPoints(user.id, user.points, parsedPoints, reason);
           setNewPoints('');
           refresh();
         }}

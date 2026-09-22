@@ -19,10 +19,11 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
-import { PAYOUT_STYLE, VerificationPill } from '@/components/admin/shared';
-import { Button, MockBanner, StatusPill, Text } from '@/components/ui';
+import { VerificationPill } from '@/components/admin/shared';
+import { Button, Text } from '@/components/ui';
 import type { AdminProvider, VerificationStatus } from '@/types';
 
 type StatusFilter = 'all' | VerificationStatus;
@@ -34,7 +35,7 @@ export default function ProvidersPage() {
   const [status, setStatus] = useState<StatusFilter>('all');
   const [side, setSide] = useState<SideFilter>('all');
 
-  const { data: providers, loading } = useAsyncData(() => apiClient.listProviders(), []);
+  const { data: providers, loading, error, refresh } = useAsyncData(() => apiClient.listProviders(), []);
 
   const rows = useMemo(() => {
     const all = providers ?? [];
@@ -77,24 +78,9 @@ export default function ProvidersPage() {
       sortValue: (p) => p.verificationStatus,
       cell: (p) => <VerificationPill status={p.verificationStatus} />,
     },
-    {
-      id: 'payout',
-      header: 'Payout account',
-      sortValue: (p) => p.payoutAccount.status,
-      cell: (p) => {
-        const style = PAYOUT_STYLE[p.payoutAccount.status];
-        return (
-          <CellStack
-            title={<StatusPill label={style.label} tone={style.tone} />}
-            detail={
-              p.payoutAccount.outstanding.length > 0
-                ? `${p.payoutAccount.outstanding.length} thing${p.payoutAccount.outstanding.length === 1 ? '' : 's'} outstanding`
-                : undefined
-            }
-          />
-        );
-      },
-    },
+    // No payout-account column: the server keeps whether each business can be
+    // paid, but does not send it to the admin panel yet. A column of blanks, or
+    // of guesses, would be worse than no column.
     {
       id: 'fleet',
       header: 'Fleet',
@@ -124,14 +110,15 @@ export default function ProvidersPage() {
   const countBy = (predicate: (p: AdminProvider) => boolean) =>
     (providers ?? []).filter(predicate).length;
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Providers" what="The rental businesses" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
         title="Providers"
         description="Every rental business — their verification, their documents, their fleet, and whether they can actually be paid."
       />
-
-      <MockBanner />
 
       <PageCard
         title="Rental businesses"

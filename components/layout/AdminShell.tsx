@@ -52,20 +52,45 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }, [phase, router]);
 
   // The frame's own data. Only fetched once there is somebody to show it to.
+  //
+  // TWO SEPARATE JOBS THAT FAIL SEPARATELY. These used to be fetched as one
+  // bundle with nothing to catch a failure, which was harmless while it was all
+  // sample data and is not now: one list failing to arrive would have thrown the
+  // badge away with it, and left an error nobody handled.
+  //
+  //   - The count for the sidebar badge. If it cannot be fetched there is no
+  //     badge — which is what "nothing waiting" also looks like, but never a
+  //     number, because a wrong number is worse than none.
+  //   - The lists the top-bar search looks through. Each is fetched on its own,
+  //     so a search can still find customers when bookings failed to load.
   useEffect(() => {
     if (!isSignedIn) return;
     let cancelled = false;
 
-    Promise.all([
-      apiClient.getActionQueue(),
+    apiClient
+      .getActionQueue()
+      .then((queue) => {
+        if (!cancelled) setQueueCount(queue.length);
+      })
+      .catch(() => {
+        if (!cancelled) setQueueCount(0);
+      });
+
+    Promise.allSettled([
       apiClient.listUsers(),
       apiClient.listProviders(),
       apiClient.listVehicles(),
       apiClient.listBookings(),
-    ]).then(([queue, users, providers, vehicles, bookings]) => {
+    ]).then(([users, providers, vehicles, bookings]) => {
       if (cancelled) return;
-      setQueueCount(queue.length);
-      setIndex({ users, providers, vehicles, bookings });
+      const got = <T,>(result: PromiseSettledResult<T[]>): T[] =>
+        result.status === 'fulfilled' ? result.value : [];
+      setIndex({
+        users: got(users),
+        providers: got(providers),
+        vehicles: got(vehicles),
+        bookings: got(bookings),
+      });
     });
 
     return () => {

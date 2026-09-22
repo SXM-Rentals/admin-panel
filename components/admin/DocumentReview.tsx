@@ -24,24 +24,21 @@ import { longDate, shortDate } from '@/lib/format';
 import { ReasonDialog } from './ReasonDialog';
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STYLE } from './shared';
 import { Button, Icon, StatusPill, Text } from '@/components/ui';
-import type { AuditEntry, VehicleDocument } from '@/types';
+import type { VehicleDocument } from '@/types';
 import styles from './admin.module.css';
 
 export function DocumentReview({
   document,
-  subjectId,
   subjectLabel,
-  subjectType,
   onDecided,
 }: {
   document: VehicleDocument;
-  // What the document belongs to, for the audit entry.
-  subjectId: string;
+  // What the document belongs to, in words: "Toyota RAV4 2023 · SXM-V-118".
+  // Shown in the reason dialog so it is obvious which car this is about.
   subjectLabel: string;
-  subjectType: AuditEntry['subjectType'];
-  // Called after a decision, with the decision and the reason, so the screen
-  // above can save it and refresh.
-  onDecided: (decision: 'approved' | 'rejected', reason: string) => Promise<void> | void;
+  // Called once a reason has been given, with whether it was approved, so the
+  // screen above can send the decision and refresh.
+  onDecided: (approve: boolean, reason: string) => Promise<void> | void;
 }) {
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
 
@@ -88,9 +85,9 @@ export function DocumentReview({
         <Text variant="small" tone="ink3" as="p" raw>
           Filed {longDate(document.uploadedAt)}
           {document.expiresAt ? ` · expires ${shortDate(document.expiresAt)}` : ''}
-          {document.reviewedBy && document.reviewedAt
-            ? ` · read by ${document.reviewedBy} on ${shortDate(document.reviewedAt)}`
-            : ''}
+          {/* When, but not who: the server does not say who read it here. That
+              is in the audit log, against their name, with their reason. */}
+          {document.reviewedAt ? ` · read on ${shortDate(document.reviewedAt)}` : ''}
         </Text>
 
         {expired && document.status !== 'rejected' ? (
@@ -159,7 +156,7 @@ export function DocumentReview({
           after: pending === 'approved' ? 'Approved' : 'Rejected',
         }}
         onConfirm={async (reason) => {
-          if (pending) await onDecided(pending, reason);
+          if (pending) await onDecided(pending === 'approved', reason);
         }}
       />
     </div>

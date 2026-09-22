@@ -22,7 +22,6 @@ import type {
   BookingStatus,
   DisputeCase,
   DepositStatus,
-  ProviderPayoutAccount,
   VerificationStatus,
 } from '@/types';
 import styles from './admin.module.css';
@@ -51,19 +50,6 @@ export const DEPOSIT_STYLE: Record<DepositStatus, { label: string; tone: StatusT
   held: { label: 'Held', tone: 'warning' },
   released: { label: 'Released', tone: 'success' },
   claimed: { label: 'Claimed', tone: 'danger' },
-};
-
-// How each payout state reads. "Restricted" is deliberately not called
-// "Blocked": Stripe is waiting for something, which is a different situation
-// from having refused, and the two want different phone calls.
-export const PAYOUT_STYLE: Record<
-  ProviderPayoutAccount['status'],
-  { label: string; tone: StatusTone }
-> = {
-  active: { label: 'Payouts On', tone: 'success' },
-  pending: { label: 'Onboarding', tone: 'warning' },
-  restricted: { label: 'Restricted', tone: 'danger' },
-  not_started: { label: 'Not Started', tone: 'neutral' },
 };
 
 export const DISPUTE_STYLE: Record<DisputeCase['status'], { label: string; tone: StatusTone }> = {

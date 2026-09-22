@@ -20,15 +20,15 @@
 import React, { useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import { useAdminSession } from '@/lib/auth';
 import { money, relativeDay, shortDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { ReasonDialog } from '@/components/admin/ReasonDialog';
 import { StatGrid, StatTile } from '@/components/admin/StatTile';
 import { Note, Quote } from '@/components/admin/shared';
-import { Button, MockBanner, StatusPill, Text } from '@/components/ui';
+import { Button, StatusPill, Text } from '@/components/ui';
 import type { RefundRequest } from '@/types';
 import type { StatusTone } from '@/components/ui';
 
@@ -41,14 +41,13 @@ const STATUS_STYLE: Record<RefundRequest['status'], { label: string; tone: Statu
 type StatusFilter = 'all' | RefundRequest['status'];
 
 export default function RefundsQueuePage() {
-  const { staff } = useAdminSession();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('pending');
 
   // Which request is being decided, and which way.
   const [deciding, setDeciding] = useState<{ refund: RefundRequest; decision: 'approved' | 'denied' } | null>(null);
 
-  const { data: refunds, loading, refresh } = useAsyncData(() => apiClient.listRefunds(), []);
+  const { data: refunds, loading, error, refresh } = useAsyncData(() => apiClient.listRefunds(), []);
 
   const all = refunds ?? [];
 
@@ -124,14 +123,15 @@ export default function RefundsQueuePage() {
     },
   ];
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Refunds" what="The refund requests" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
         title="Refunds"
         description="Requests waiting on a decision. Each one is a customer waiting to hear back from somebody here."
       />
-
-      <MockBanner />
 
       <StatGrid columns={3}>
         <StatTile
@@ -252,12 +252,10 @@ export default function RefundsQueuePage() {
         }}
         onConfirm={async (reason) => {
           if (!deciding) return;
-          await apiClient.decideRefund(
-            deciding.refund.id,
-            deciding.decision,
-            reason,
-            staff?.name ?? 'Unknown',
-          );
+          // The server records who decided, from the session; the panel only
+          // says what was decided and why. Approving goes through Stripe, and
+          // is refused with an explanation until Stripe is connected.
+          await apiClient.decideRefund(deciding.refund.id, deciding.decision === 'approved', reason);
           refresh();
         }}
       />

@@ -26,10 +26,11 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { stamp } from '@/lib/format';
 import { auditActionLabels } from '@/lib/labels';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterSelect } from '@/components/admin/FilterBar';
 import { Note } from '@/components/admin/shared';
-import { Button, Icon, MockBanner, StatusPill, Text } from '@/components/ui';
+import { Button, Icon, StatusPill, Text } from '@/components/ui';
 import type { AuditAction, AuditEntry } from '@/types';
 import styles from '@/components/tables/table.module.css';
 
@@ -50,7 +51,7 @@ export default function AuditLogPage() {
   const [action, setAction] = useState<'all' | AuditAction>('all');
   const [window, setWindow] = useState<Window>('all');
 
-  const { data: entries, loading } = useAsyncData(() => apiClient.getAuditLog(), []);
+  const { data: entries, loading, error, refresh } = useAsyncData(() => apiClient.getAuditLog(), []);
   const { data: allStaff } = useAsyncData(() => apiClient.listStaff(), []);
 
   const all = entries ?? [];
@@ -131,6 +132,9 @@ export default function AuditLogPage() {
     },
   ];
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Audit Log" what="The audit log" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
@@ -145,8 +149,6 @@ export default function AuditLogPage() {
           />
         }
       />
-
-      <MockBanner />
 
       <PageCard
         title="Changes"

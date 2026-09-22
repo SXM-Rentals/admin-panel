@@ -17,11 +17,12 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, relativeDay } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { StatGrid, StatTile } from '@/components/admin/StatTile';
 import { DISPUTE_STYLE, Note } from '@/components/admin/shared';
-import { Button, MockBanner, StatusPill, Text } from '@/components/ui';
+import { Button, StatusPill, Text } from '@/components/ui';
 import type { DisputeCase } from '@/types';
 
 type StatusFilter = 'all' | DisputeCase['status'];
@@ -31,7 +32,7 @@ export default function DisputesPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
 
-  const { data: disputes, loading } = useAsyncData(() => apiClient.listDisputes(), []);
+  const { data: disputes, loading, error, refresh } = useAsyncData(() => apiClient.listDisputes(), []);
 
   const all = disputes ?? [];
 
@@ -110,14 +111,15 @@ export default function DisputesPage() {
     },
   ];
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Disputes" what="The disputes" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
         title="Disputes"
         description="Where a customer and a business disagree, and somebody here has to decide."
       />
-
-      <MockBanner />
 
       <StatGrid columns={3}>
         <StatTile

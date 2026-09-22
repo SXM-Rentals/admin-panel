@@ -1,493 +1,325 @@
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
 // WHAT THIS FILE DOES: This is the single doorway between the panel's screens
-// and its information. Right now every function below hands back MOCK (made-up)
-// data from the lib/mock folder — there is no server, no database, and nothing
-// being changed for real.
+// and SXM Rentals' records. Every screen asks this file for what it needs, and
+// this file asks the SXM Rentals server. Nothing here is made up any more: what
+// a screen shows is what the server holds.
 //
-// WHY IT MATTERS: because all the screens ask this file for data instead of
-// reaching for the mock files directly, connecting the real backend later means
-// changing only this one file. No screen has to be rewritten. That rule is worth
-// defending — if one screen imports from lib/mock, the swap stops being a
-// one-file job and becomes a hunt.
+// WHY IT MATTERS THAT IT IS ONE FILE: because every screen asks here rather
+// than reaching for the server itself, the server's addresses, their quirks and
+// any difference between what the server sends and what a screen draws are all
+// dealt with in one place. That rule is worth defending — a screen that talked
+// to the server directly would be the one place a change to the server did not
+// get noticed.
 //
-// Each function is marked with a TODO naming the real address it will eventually
-// call on the SXM Rentals backend. The same list appears on the Playbook screen.
+// WHAT IS NOT HERE, ON PURPOSE. The server does not yet have promotions,
+// rewards settings, platform settings, booking conversations, or a way to edit
+// or close a rental business. There is no function for any of them, so no
+// screen can appear to save something that goes nowhere. Those screens say
+// plainly that they are not connected yet.
+//
+// THREE THINGS THAT HOLD FOR EVERY FUNCTION BELOW:
+//
+//   - Every change sends the reason typed into the reason dialog. The server
+//     refuses a change without one and writes the audit entry itself.
+//
+//   - Asking for one record that does not exist gives back `undefined`, so a
+//     screen can say "not found". Failing to FIND OUT gives an error instead —
+//     a server that is asleep has not said the customer does not exist, and a
+//     screen must not claim it has.
+//
+//   - Lists ask for the most the server will send in one go: two hundred. The
+//     screens page through them themselves. Past two hundred of anything, the
+//     lists will need to ask page by page instead — a job for when there are
+//     that many.
 
+import { api } from '@/lib/api/http';
+import { ApiError } from '@/lib/api/errors';
 import type {
   AdminBooking,
+  AdminPayout,
   AdminProvider,
+  AdminStaff,
   AdminUser,
   AdminVehicle,
+  AdminVehicleDetail,
   AuditEntry,
-  DateRangeKey,
   DepositLedgerEntry,
   DisputeCase,
   LedgerEntry,
-  PlatformSettings,
   PlatformSummary,
-  PromoCode,
   QueueItem,
   RefundRequest,
-  RewardsConfig,
+  SeriesPoint,
 } from '@/types';
 
-import { mockUsers, findUser } from './mock/users';
-import { mockProviders, findProvider } from './mock/providers';
-import { mockVehicles, findVehicle, vehiclesAwaitingReview } from './mock/vehicles';
-import { mockBookings, findBooking, findBookingByRef, messagesFor } from './mock/bookings';
-import { mockLedger, mockRefunds, mockDeposits, findRefund } from './mock/payments';
-import { mockDisputes, findDispute } from './mock/disputes';
-import { mockPromotions } from './mock/promotions';
-import { mockRewardsConfig } from './mock/rewards';
-import { mockSettings } from './mock/settings';
-import { allAuditEntries } from './mock/audit';
-import { buildSummary, buildQueue, buildMonthlySeries, buildSeries } from './mock/summary';
-import { mockStaff } from './mock/staff';
+// The most the server sends in one go.
+const LIST_LIMIT = 200;
 
-// A short made-up wait, so loading skeletons behave the way they will once there
-// is a real server to wait for. Without this everything would appear instantly
-// and we would never see those states during development — and then they would
-// appear for the first time in front of a real user on a bad connection.
-function fakeNetworkDelay<T>(value: T, ms = 280): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+// ---- "NOT FOUND" AS AN ANSWER, NOT A FAULT ----
+// Turns the server's "there is no such record" into `undefined`, and lets
+// every other failure through. See the note at the top of this file.
+async function orNotFound<T>(request: Promise<T>): Promise<T | undefined> {
+  try {
+    return await request;
+  } catch (caught) {
+    if (caught instanceof ApiError && caught.status === 404) return undefined;
+    throw caught;
+  }
 }
+
+// The fields of a customer the server lets staff change, one at a time.
+export type EditableUserField = 'firstName' | 'lastName' | 'email' | 'phone' | 'accountType' | 'isIslander';
 
 export const apiClient = {
   // ---- THE DASHBOARD ----
 
-  // MOCK. TODO: replace with GET /admin/summary?range=
-  async getSummary(range: DateRangeKey = 'quarter'): Promise<PlatformSummary> {
-    return fakeNetworkDelay(buildSummary(range));
+  // The headline figures. ALWAYS ALL-TIME: the server does not yet take a date
+  // range for these, so the dashboard offers no range to choose. The figures
+  // hold one rule the dashboard relies on — gross equals what businesses are
+  // paid plus what SXM Rentals keeps — and deposits held are reported apart
+  // from all three.
+  async getSummary(): Promise<PlatformSummary> {
+    const summary = await api.get<PlatformSummary>('/admin/summary');
+    return {
+      ...summary,
+      // The server labels the trend months "2026-09". Everywhere else in the
+      // panel a month reads "Sep 26", so it is put the same way here.
+      bookingTrend: summary.bookingTrend.map((point) => ({ ...point, label: monthLabel(point.label) })),
+    };
   },
 
-  // MOCK. TODO: replace with GET /admin/queue
+  // Everything waiting on somebody, oldest first.
   async getActionQueue(): Promise<QueueItem[]> {
-    return fakeNetworkDelay(buildQueue());
+    return api.get<QueueItem[]>('/admin/queue');
   },
 
   // ---- CUSTOMERS ----
 
-  // MOCK. TODO: replace with GET /admin/users
-  async listUsers(): Promise<AdminUser[]> {
-    return fakeNetworkDelay(mockUsers);
+  // The server searches by name and email. The customer screen filters the
+  // same list again as somebody types, for anything else.
+  async listUsers(search?: string): Promise<AdminUser[]> {
+    return api.get<AdminUser[]>('/admin/users', { query: { search, limit: LIST_LIMIT } });
   },
 
-  // MOCK. TODO: replace with GET /admin/users/:id
   async getUser(id: string): Promise<AdminUser | undefined> {
-    return fakeNetworkDelay(findUser(id));
+    return orNotFound(api.get<AdminUser>(`/admin/users/${encodeURIComponent(id)}`));
   },
 
-  // MOCK. TODO: replace with PATCH /admin/users/:id/points
-  // Nothing is saved. The panel updates what is on screen and writes an audit
-  // entry, which is enough to build and check the flow end to end.
-  async adjustUserPoints(id: string, newTotal: number): Promise<AdminUser | undefined> {
-    const user = findUser(id);
-    if (user) user.points = newTotal;
-    return fakeNetworkDelay(user, 400);
-  },
-
-  // MOCK. TODO: replace with PATCH /admin/users/:id
-  //
   // ONE FIELD AT A TIME, ON PURPOSE. An audit entry records a single field with a
   // before and an after. A screen that changed six things at once would either
   // write six entries nobody asked for, or one entry nobody can read.
   async updateUser(
     id: string,
-    field: 'email' | 'phone' | 'firstName' | 'lastName' | 'accountType',
-    value: string,
-  ): Promise<AdminUser | undefined> {
-    const user = findUser(id);
-    if (user) {
-      if (field === 'accountType') {
-        user.accountType = value === 'local' ? 'local' : 'tourist';
-        // Islander is a residency flag, so it cannot survive a move to Tourist.
-        // Leaving it set would show somebody as a resident of an island they are
-        // no longer registered on.
-        if (user.accountType === 'tourist') user.isIslander = false;
-      } else {
-        (user as unknown as Record<string, string>)[field] = value;
-      }
-    }
-    return fakeNetworkDelay(user, 400);
+    field: EditableUserField,
+    value: string | boolean,
+    reason: string,
+  ): Promise<AdminUser> {
+    return api.patch<AdminUser>(`/admin/users/${encodeURIComponent(id)}`, {
+      body: { field, value, reason },
+    });
   },
 
-  // Whether an account can be closed at all, and what is in the way if not.
-  //
-  // THIS IS A SAFETY RULE RATHER THAN A FORMALITY. Closing an account with a
-  // rental still running, or a deposit still held, strands money that belongs to
-  // somebody: the customer cannot be paid back and nobody can be chased. The
-  // panel works that out and says which it is, rather than letting a member of
-  // staff discover it afterwards.
-  async canCloseUser(id: string): Promise<{ allowed: boolean; blockers: string[] }> {
-    const user = findUser(id);
-    const blockers: string[] = [];
-    if (!user) return fakeNetworkDelay({ allowed: false, blockers: ['No such account'] }, 120);
-
-    const theirs = mockBookings.filter((b) => b.customerId === id);
-    const live = theirs.filter((b) => b.status === 'active' || b.status === 'upcoming');
-    const held = theirs.filter((b) => b.depositStatus === 'held');
-
-    if (live.length > 0) {
-      blockers.push(
-        live.length + ' booking' + (live.length === 1 ? '' : 's') + ' still running or due to start',
-      );
-    }
-    if (held.length > 0) {
-      blockers.push(
-        held.length + ' security deposit' + (held.length === 1 ? '' : 's') + ' still being held',
-      );
-    }
-
-    return fakeNetworkDelay({ allowed: blockers.length === 0, blockers }, 120);
+  // THE SERVER TAKES THE CHANGE, NOT THE NEW TOTAL. Points are a ledger — a list
+  // of additions and deductions — rather than a number overwritten in place, so
+  // "make it 1,740" is sent as "add 500". The subtraction happens here, in one
+  // place, so no screen can get it the wrong way round.
+  async adjustUserPoints(
+    id: string,
+    currentPoints: number,
+    newTotal: number,
+    reason: string,
+  ): Promise<AdminUser> {
+    return api.patch<AdminUser>(`/admin/users/${encodeURIComponent(id)}/points`, {
+      body: { points: newTotal - currentPoints, reason },
+    });
   },
 
-  // MOCK. TODO: replace with DELETE /admin/users/:id
-  //
-  // The record is MARKED closed rather than removed. The audit log points at it,
+  // The record is MARKED closed rather than removed: the audit log points at it,
   // and an entry reading "closed the account of Noelia Vlaun" is unreadable if
   // there is no Noelia Vlaun left to look at.
-  async closeUser(id: string): Promise<AdminUser | undefined> {
-    const user = findUser(id);
-    if (user) user.deletedAt = new Date().toISOString();
-    return fakeNetworkDelay(user, 400);
+  //
+  // THE SERVER DECIDES WHETHER IT CAN BE CLOSED. It refuses while a rental is
+  // running or a deposit is held, and says which — "This account has a rental
+  // that is active (SXM-4228)". That refusal is the check; the panel no longer
+  // tries to predict it.
+  async closeUser(id: string, reason: string): Promise<void> {
+    await api.del<void>(`/admin/users/${encodeURIComponent(id)}`, { body: { reason } });
   },
 
   // ---- RENTAL BUSINESSES ----
 
-  // MOCK. TODO: replace with GET /admin/providers
   async listProviders(): Promise<AdminProvider[]> {
-    return fakeNetworkDelay(mockProviders);
+    return api.get<AdminProvider[]>('/admin/providers', { query: { limit: LIST_LIMIT } });
   },
 
-  // MOCK. TODO: replace with GET /admin/providers/:id
   async getProvider(id: string): Promise<AdminProvider | undefined> {
-    return fakeNetworkDelay(findProvider(id));
+    return orNotFound(api.get<AdminProvider>(`/admin/providers/${encodeURIComponent(id)}`));
   },
 
-  // MOCK. TODO: replace with PATCH /admin/providers/:id
-  async updateProvider(
-    id: string,
-    field:
-      | 'businessName'
-      | 'legalName'
-      | 'contactEmail'
-      | 'phone'
-      | 'website'
-      | 'ownerName'
-      | 'ownerPhone',
-    value: string,
-  ): Promise<AdminProvider | undefined> {
-    const provider = findProvider(id);
-    if (provider) (provider as unknown as Record<string, string>)[field] = value;
-    return fakeNetworkDelay(provider, 400);
-  },
-
-  // MOCK. TODO: replace with POST /admin/providers/:id/documents/:kind
-  //
-  // THE BUSINESS STATUS FOLLOWS FROM ITS DOCUMENTS, the same way a vehicle
-  // listing does. That was missing: approving both documents changed the
-  // documents and left the business sitting at Pending for ever, so working the
-  // verification queue never actually emptied it.
-  async reviewProviderDocument(
-    providerId: string,
-    kind: string,
-    decision: 'approved' | 'rejected',
-    reason: string,
-    reviewer: string,
-  ): Promise<AdminProvider | undefined> {
-    const provider = findProvider(providerId);
-    const doc = provider ? provider.documents.find((d) => d.kind === kind) : undefined;
-    if (provider && doc) {
-      doc.status = decision;
-      doc.reason = decision === 'rejected' ? reason : undefined;
-      doc.reviewedBy = reviewer;
-      doc.reviewedAt = new Date().toISOString();
-
-      const anyPending = provider.documents.some((d) => d.status === 'pending');
-      const anyRejected = provider.documents.some((d) => d.status === 'rejected');
-      provider.verificationStatus = anyRejected ? 'rejected' : anyPending ? 'pending' : 'approved';
-      // The public SXM Verified badge is the same decision, so it moves with it.
-      provider.isVerified = provider.verificationStatus === 'approved';
-    }
-    return fakeNetworkDelay(provider, 400);
-  },
-
-  // Same rule as a customer account, and for the same reason — plus the vehicles,
-  // which would otherwise be left listed with nobody behind them.
-  async canCloseProvider(id: string): Promise<{ allowed: boolean; blockers: string[] }> {
-    const provider = findProvider(id);
-    const blockers: string[] = [];
-    if (!provider) return fakeNetworkDelay({ allowed: false, blockers: ['No such business'] }, 120);
-
-    const theirs = mockBookings.filter((b) => b.providerId === id);
-    const live = theirs.filter((b) => b.status === 'active' || b.status === 'upcoming');
-    const held = theirs.filter((b) => b.depositStatus === 'held');
-    const listed = mockVehicles.filter((v) => v.providerId === id && v.listingStatus === 'live');
-
-    if (live.length > 0) {
-      blockers.push(
-        live.length + ' booking' + (live.length === 1 ? '' : 's') + ' still running or due to start',
-      );
-    }
-    if (held.length > 0) {
-      blockers.push(
-        held.length + ' security deposit' + (held.length === 1 ? '' : 's') + ' still being held',
-      );
-    }
-    if (listed.length > 0) {
-      blockers.push(
-        listed.length + ' vehicle' + (listed.length === 1 ? '' : 's') + ' still listed and bookable',
-      );
-    }
-
-    return fakeNetworkDelay({ allowed: blockers.length === 0, blockers }, 120);
-  },
-
-  // MOCK. TODO: replace with DELETE /admin/providers/:id
-  async closeProvider(id: string): Promise<AdminProvider | undefined> {
-    const provider = findProvider(id);
-    if (provider) {
-      provider.verificationStatus = 'rejected';
-      provider.isVerified = false;
-    }
-    return fakeNetworkDelay(provider, 400);
+  // The "SXM Verified" decision, made once for the whole business. There is no
+  // document-by-document review of a business on the server: this is the one
+  // decision, and it is what the public badge follows.
+  async decideProviderVerification(id: string, approve: boolean, reason: string): Promise<AdminProvider> {
+    return api.post<AdminProvider>(`/admin/providers/${encodeURIComponent(id)}/verification`, {
+      body: { approve, reason },
+    });
   },
 
   // ---- VEHICLES ----
 
-  // MOCK. TODO: replace with GET /admin/vehicles
   async listVehicles(): Promise<AdminVehicle[]> {
-    return fakeNetworkDelay(mockVehicles);
+    return api.get<AdminVehicle[]>('/admin/vehicles', { query: { limit: LIST_LIMIT } });
   },
 
-  // MOCK. TODO: replace with GET /admin/vehicles/:id
-  async getVehicle(id: string): Promise<AdminVehicle | undefined> {
-    return fakeNetworkDelay(findVehicle(id));
+  // One vehicle, with its paperwork. The list above does not carry documents.
+  async getVehicle(id: string): Promise<AdminVehicleDetail | undefined> {
+    return orNotFound(api.get<AdminVehicleDetail>(`/admin/vehicles/${encodeURIComponent(id)}`));
   },
 
-  // MOCK. TODO: replace with GET /admin/vehicles?documents=pending
-  async listVehiclesAwaitingReview(): Promise<AdminVehicle[]> {
-    return fakeNetworkDelay(vehiclesAwaitingReview());
+  // Whether customers can see and book it. A DIFFERENT DECISION FROM THE
+  // PAPERWORK: approving every document does not put a car live on its own.
+  // Somebody decides that, here, and gives a reason.
+  async decideVehicleListing(id: string, approve: boolean, reason: string): Promise<AdminVehicleDetail> {
+    return api.post<AdminVehicleDetail>(`/admin/vehicles/${encodeURIComponent(id)}/listing`, {
+      body: { approve, reason },
+    });
   },
 
-  // MOCK. TODO: replace with POST /admin/vehicles/:id/documents/:kind
-  // The reason is not optional in the real call either — a rejected document
-  // without one is unanswerable when the provider rings up about it.
-  async reviewVehicleDocument(
-    vehicleId: string,
-    kind: string,
-    decision: 'approved' | 'rejected',
-    reason: string,
-    reviewer: string,
-  ): Promise<AdminVehicle | undefined> {
-    const vehicle = findVehicle(vehicleId);
-    const doc = vehicle?.documents.find((d) => d.kind === kind);
-    if (vehicle && doc) {
-      doc.status = decision;
-      doc.reason = decision === 'rejected' ? reason : undefined;
-      doc.reviewedBy = reviewer;
-      doc.reviewedAt = new Date().toISOString();
-      // A vehicle goes live once nothing is pending and nothing was rejected.
-      const anyPending = vehicle.documents.some((d) => d.status === 'pending');
-      const anyRejected = vehicle.documents.some((d) => d.status === 'rejected');
-      vehicle.listingStatus = anyRejected ? 'suspended' : anyPending ? 'pending_review' : 'live';
-    }
-    return fakeNetworkDelay(vehicle, 400);
+  // Keyed by the document's own id rather than "the vehicle's insurance one":
+  // a car can have had more than one insurance certificate.
+  async reviewVehicleDocument(documentId: string, approve: boolean, reason: string): Promise<void> {
+    await api.post<void>(`/admin/vehicles/documents/${encodeURIComponent(documentId)}/review`, {
+      body: { approve, reason },
+    });
   },
 
   // ---- BOOKINGS ----
 
-  // MOCK. TODO: replace with GET /admin/bookings
   async listBookings(): Promise<AdminBooking[]> {
-    return fakeNetworkDelay(mockBookings);
+    return api.get<AdminBooking[]>('/admin/bookings', { query: { limit: LIST_LIMIT } });
   },
 
-  // MOCK. TODO: replace with GET /admin/bookings/:id
   async getBooking(id: string): Promise<AdminBooking | undefined> {
-    return fakeNetworkDelay(findBooking(id));
+    return orNotFound(api.get<AdminBooking>(`/admin/bookings/${encodeURIComponent(id)}`));
   },
 
-  // MOCK. TODO: replace with GET /admin/bookings?reference=
   // A dispute knows the booking REFERENCE rather than its id, and "open the
   // booking this is about" is the first thing anybody investigating one wants.
+  // The server answers with a list of none or one.
   async getBookingByRef(reference: string): Promise<AdminBooking | undefined> {
-    return fakeNetworkDelay(findBookingByRef(reference), 120);
-  },
-
-  // MOCK. TODO: replace with GET /admin/bookings/:id/messages
-  async getBookingMessages(id: string) {
-    const booking = findBooking(id);
-    return fakeNetworkDelay(booking ? messagesFor(booking) : []);
+    const found = await api.get<AdminBooking[]>('/admin/bookings', { query: { reference, limit: 1 } });
+    return found[0];
   },
 
   // ---- MONEY ----
 
-  // MOCK. TODO: replace with GET /admin/payments
+  // Charges, refunds, payouts and commission. Deposits are never in here — the
+  // server has no such thing as a deposit line in the ledger, which is the
+  // strongest possible version of "a deposit is not revenue".
   async getLedger(): Promise<LedgerEntry[]> {
-    return fakeNetworkDelay(mockLedger);
+    return api.get<LedgerEntry[]>('/admin/payments', { query: { limit: LIST_LIMIT } });
   },
 
-  // MOCK. TODO: replace with GET /admin/refunds
+  // Money sent on to rental businesses. Read only: Stripe sends it.
+  async listPayouts(): Promise<AdminPayout[]> {
+    return api.get<AdminPayout[]>('/admin/payouts', { query: { limit: LIST_LIMIT } });
+  },
+
   async listRefunds(): Promise<RefundRequest[]> {
-    return fakeNetworkDelay(mockRefunds);
+    return api.get<RefundRequest[]>('/admin/refunds');
   },
 
-  // MOCK. TODO: replace with POST /admin/refunds/:id
-  async decideRefund(
-    id: string,
-    decision: 'approved' | 'denied',
-    reason: string,
-    decidedBy: string,
-  ): Promise<RefundRequest | undefined> {
-    const refund = findRefund(id);
-    if (refund) {
-      refund.status = decision;
-      refund.decisionReason = reason;
-      refund.decidedBy = decidedBy;
-      refund.decidedAt = new Date().toISOString();
-    }
-    return fakeNetworkDelay(refund, 400);
+  // Approving sends the money back through Stripe. The server refuses if the
+  // refund has already been decided, and cannot approve one at all until
+  // Stripe is connected — both come back as a sentence the dialog shows.
+  async decideRefund(id: string, approve: boolean, reason: string): Promise<void> {
+    await api.post<void>(`/admin/refunds/${encodeURIComponent(id)}/decision`, {
+      body: { approve, reason },
+    });
   },
 
-  // MOCK. TODO: replace with GET /admin/deposits
-  // Deliberately a separate call from getLedger above. A deposit is not a
-  // payment and the two lists must never be merged — see the note at the top of
-  // lib/mock/payments.ts.
+  // Deliberately separate from the ledger above. A deposit is not a payment and
+  // the two lists must never be merged.
   async getDeposits(): Promise<DepositLedgerEntry[]> {
-    return fakeNetworkDelay(mockDeposits);
+    return api.get<DepositLedgerEntry[]>('/admin/deposits');
   },
 
-  // MOCK. TODO: replace with POST /admin/deposits/:id/claim
-  async claimDeposit(id: string, reason: string): Promise<DepositLedgerEntry | undefined> {
-    const deposit = mockDeposits.find((d) => d.id === id);
-    if (deposit) {
-      deposit.status = 'claimed';
-      deposit.claimReason = reason;
-      deposit.claimedAt = new Date().toISOString();
-    }
-    return fakeNetworkDelay(deposit, 400);
+  async releaseDeposit(id: string, reason: string): Promise<void> {
+    await api.post<void>(`/admin/deposits/${encodeURIComponent(id)}/release`, {
+      body: { reason },
+    });
   },
 
-  // MOCK. TODO: replace with POST /admin/deposits/:id/release
-  async releaseDeposit(id: string): Promise<DepositLedgerEntry | undefined> {
-    const deposit = mockDeposits.find((d) => d.id === id);
-    if (deposit) {
-      deposit.status = 'released';
-      deposit.releasedAt = new Date().toISOString();
-    }
-    return fakeNetworkDelay(deposit, 400);
+  // Keeping part or all of a deposit. The amount is in dollars, can be part of
+  // what was held, and can never be more — the server refuses both "more than
+  // was held" and a deposit that is no longer being held.
+  async claimDeposit(id: string, amount: number, reason: string): Promise<void> {
+    await api.post<void>(`/admin/deposits/${encodeURIComponent(id)}/claim`, {
+      body: { amount, reason },
+    });
   },
 
   // ---- DISPUTES ----
 
-  // MOCK. TODO: replace with GET /admin/disputes
   async listDisputes(): Promise<DisputeCase[]> {
-    return fakeNetworkDelay(mockDisputes);
+    return api.get<DisputeCase[]>('/admin/disputes');
   },
 
-  // MOCK. TODO: replace with GET /admin/disputes/:id
   async getDispute(id: string): Promise<DisputeCase | undefined> {
-    return fakeNetworkDelay(findDispute(id));
+    return orNotFound(api.get<DisputeCase>(`/admin/disputes/${encodeURIComponent(id)}`));
   },
 
-  // MOCK. TODO: replace with POST /admin/disputes/:id/assign
-  async assignDispute(id: string, staffId: string): Promise<DisputeCase | undefined> {
-    const dispute = findDispute(id);
-    const staff = mockStaff.find((s) => s.id === staffId);
-    if (dispute && staff) {
-      dispute.assignedToId = staff.id;
-      dispute.assignedToName = staff.name;
-      if (dispute.status === 'open') dispute.status = 'investigating';
-    }
-    return fakeNetworkDelay(dispute, 400);
+  // Assigning is a recorded change like any other: an unowned dispute is the
+  // thing most likely to be forgotten, and who took it on — and why them — is
+  // worth being able to look up.
+  async assignDispute(id: string, staffId: string, reason: string): Promise<DisputeCase> {
+    return api.post<DisputeCase>(`/admin/disputes/${encodeURIComponent(id)}/assign`, {
+      body: { staffId, reason },
+    });
   },
 
-  // MOCK. TODO: replace with POST /admin/disputes/:id/resolve
-  async resolveDispute(id: string, notes: string): Promise<DisputeCase | undefined> {
-    const dispute = findDispute(id);
-    if (dispute) {
-      dispute.status = 'resolved';
-      dispute.resolutionNotes = notes;
-      dispute.resolvedAt = new Date().toISOString();
-    }
-    return fakeNetworkDelay(dispute, 400);
-  },
-
-  // ---- PROMOTIONS ----
-
-  // MOCK. TODO: replace with GET /admin/promotions
-  async listPromotions(): Promise<PromoCode[]> {
-    return fakeNetworkDelay(mockPromotions);
-  },
-
-  // MOCK. TODO: replace with POST /admin/promotions
-  async createPromotion(draft: Omit<PromoCode, 'id' | 'usedCount'>): Promise<PromoCode> {
-    const created: PromoCode = { ...draft, id: 'pr-' + Date.now(), usedCount: 0 };
-    mockPromotions.unshift(created);
-    return fakeNetworkDelay(created, 400);
-  },
-
-  // MOCK. TODO: replace with PATCH /admin/promotions/:id
-  async setPromotionStatus(id: string, status: PromoCode['status']): Promise<PromoCode | undefined> {
-    const promo = mockPromotions.find((p) => p.id === id);
-    if (promo) promo.status = status;
-    return fakeNetworkDelay(promo, 300);
-  },
-
-  // ---- REWARDS ----
-
-  // MOCK. TODO: replace with GET /admin/rewards
-  async getRewardsConfig(): Promise<RewardsConfig> {
-    return fakeNetworkDelay(mockRewardsConfig);
-  },
-
-  // MOCK. TODO: replace with PUT /admin/rewards
-  async saveRewardsConfig(config: RewardsConfig): Promise<RewardsConfig> {
-    mockRewardsConfig.tiers = config.tiers;
-    mockRewardsConfig.earning = config.earning;
-    return fakeNetworkDelay(mockRewardsConfig, 400);
+  // Two separate pieces of writing, on purpose. The NOTES are the outcome — what
+  // was found and what was done, shown on the dispute for anybody who opens it.
+  // The REASON is why this person closed it, and goes into the audit log.
+  async resolveDispute(id: string, notes: string, reason: string): Promise<DisputeCase> {
+    return api.post<DisputeCase>(`/admin/disputes/${encodeURIComponent(id)}/resolve`, {
+      body: { notes, reason },
+    });
   },
 
   // ---- ANALYTICS ----
 
-  // MOCK. TODO: replace with GET /admin/analytics?months=
-  async getMonthlySeries(months: number) {
-    return fakeNetworkDelay(buildMonthlySeries(months));
-  },
-
-  // MOCK. TODO: replace with GET /admin/analytics?from=&to=
-  // Any two dates. The bucket size (day, week or month) is worked out from the
-  // span — see the note in lib/mock/summary.ts.
-  async getSeries(startISO: string, endISO: string) {
-    return fakeNetworkDelay(buildSeries(startISO, endISO));
-  },
-
-  // ---- PLATFORM SETTINGS ----
-
-  // MOCK. TODO: replace with GET /admin/settings
-  async getSettings(): Promise<PlatformSettings> {
-    return fakeNetworkDelay(mockSettings);
-  },
-
-  // MOCK. TODO: replace with PUT /admin/settings
-  async saveSettings(next: Partial<PlatformSettings>): Promise<PlatformSettings> {
-    Object.assign(mockSettings, next);
-    return fakeNetworkDelay(mockSettings, 400);
+  // Any two dates, as "2026-09-01". The server groups the bars to suit the span;
+  // see lib/analytics.ts for how the panel says which grouping it used.
+  async getSeries(startISO: string, endISO: string): Promise<SeriesPoint[]> {
+    return api.get<SeriesPoint[]>('/admin/analytics', {
+      query: { from: startISO.slice(0, 10), to: endISO.slice(0, 10) },
+    });
   },
 
   // ---- STAFF ----
 
-  // MOCK. TODO: replace with GET /admin/staff
   // Used by the dispute assignment picker and the audit log filter.
-  async listStaff() {
-    return fakeNetworkDelay(mockStaff, 120);
+  async listStaff(): Promise<AdminStaff[]> {
+    return api.get<AdminStaff[]>('/admin/staff');
   },
 
   // ---- THE AUDIT LOG ----
 
-  // MOCK. TODO: replace with GET /admin/audit
+  // Newest first, written by the server as each change is made.
   async getAuditLog(): Promise<AuditEntry[]> {
-    return fakeNetworkDelay(allAuditEntries());
+    return api.get<AuditEntry[]>('/admin/audit', { query: { limit: LIST_LIMIT } });
   },
 };
+
+// "2026-09" → "Sep 26", the way every other month in the panel reads.
+function monthLabel(yearMonth: string): string {
+  const [year, month] = yearMonth.split('-').map(Number);
+  if (!year || !month) return yearMonth;
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
+    month: 'short',
+    year: '2-digit',
+    timeZone: 'UTC',
+  });
+}

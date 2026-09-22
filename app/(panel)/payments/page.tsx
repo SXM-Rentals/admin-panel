@@ -21,11 +21,12 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, stamp } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { StatGrid, StatTile } from '@/components/admin/StatTile';
 import { Note } from '@/components/admin/shared';
-import { MockBanner, StatusPill, Text } from '@/components/ui';
+import { StatusPill, Text } from '@/components/ui';
 import type { LedgerEntry } from '@/types';
 import type { StatusTone } from '@/components/ui';
 
@@ -48,7 +49,7 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState<KindFilter>('all');
 
-  const { data: ledger, loading } = useAsyncData(() => apiClient.getLedger(), []);
+  const { data: ledger, loading, error, refresh } = useAsyncData(() => apiClient.getLedger(), []);
 
   const all = ledger ?? [];
 
@@ -132,6 +133,9 @@ export default function PaymentsPage() {
     },
   ];
 
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Payments" what="The payment ledger" error={error} onRetry={refresh} />;
+
   const countBy = (k: LedgerEntry['kind']) => all.filter((e) => e.kind === k).length;
 
   return (
@@ -140,8 +144,6 @@ export default function PaymentsPage() {
         title="Payments"
         description="Every movement of rental money — what was charged, what was paid out, what was kept, and what went back."
       />
-
-      <MockBanner />
 
       <StatGrid>
         <StatTile

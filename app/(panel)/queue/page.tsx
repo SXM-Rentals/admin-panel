@@ -23,8 +23,9 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { relativeDay } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
-import { Icon, MockBanner, Skeleton, StatusPill, Text } from '@/components/ui';
+import { Icon, Skeleton, StatusPill, Text } from '@/components/ui';
 import type { QueueItem } from '@/types';
 import styles from '@/components/admin/admin.module.css';
 
@@ -52,12 +53,15 @@ const URGENCY: Record<QueueItem['urgency'], { tone: 'neutral' | 'warning' | 'dan
 
 export default function ActionQueuePage() {
   const [kind, setKind] = useState<KindFilter>('all');
-  const { data: queue, loading } = useAsyncData(() => apiClient.getActionQueue(), []);
+  const { data: queue, loading, error, refresh } = useAsyncData(() => apiClient.getActionQueue(), []);
 
   const items = queue ?? [];
   const visible = kind === 'all' ? items : items.filter((item) => item.kind === kind);
 
   const count = (k: QueueItem['kind']) => items.filter((item) => item.kind === k).length;
+
+  // A queue that could not be fetched is not an empty queue. See LoadFailed.
+  if (error) return <LoadFailed title="Action Queue" what="The queue" error={error} onRetry={refresh} />;
 
   return (
     <>
@@ -65,8 +69,6 @@ export default function ActionQueuePage() {
         title="Action Queue"
         description="Everything waiting on somebody here, oldest first. This is the number on the sidebar."
       />
-
-      <MockBanner />
 
       <PageCard
         title="Waiting"

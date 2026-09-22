@@ -2,34 +2,49 @@
 
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
-// WHAT THIS FILE DOES: Reviewing one vehicle's paperwork — the registration, the
-// insurance certificate and the roadworthiness certificate — and approving or
-// rejecting each one with a reason.
+// WHAT THIS FILE DOES: One vehicle — reading its paperwork (the registration,
+// the insurance certificate and the roadworthiness certificate), and deciding
+// whether customers can book it.
 //
-// WHETHER THE VEHICLE IS LISTED FOLLOWS FROM THE DOCUMENTS, and is not a
-// separate switch somebody has to remember to flick. All three approved and it
-// goes live; anything still unread and it waits; anything rejected and it is
-// suspended. Tying the two together is what stops a car with expired insurance
-// sitting on the site because a rejection was recorded and the listing was not.
+// TWO DECISIONS, AND THEY ARE KEPT APART ON PURPOSE. Approving the paperwork and
+// putting the car live are separate on the SXM Rentals server: every document
+// can be approved and the car still not be listed, and a listed car does not
+// come down by itself when a document is rejected. This screen used to say the
+// opposite — "all three approved and it goes live" — because the sample data
+// worked that way. The real one does not, so the listing now has its own card,
+// its own buttons and its own reason, and the screen says plainly that the two
+// do not follow each other.
+//
+// THE LISTING BUTTONS ARE NEVER GREYED OUT BY WHAT THE DOCUMENTS SAY. It would
+// be easy to stop somebody putting a car live while a document is unread — and
+// it would be the panel guessing at a rule the server does not have. Instead the
+// dialog says, in so many words, which documents are not yet approved, and the
+// decision stays with the person making it.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import { useAdminSession } from '@/lib/auth';
 import { money, vehicleClassLabels } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DocumentReview } from '@/components/admin/DocumentReview';
-import { InfoRow, InfoRows, LISTING_STYLE, Note } from '@/components/admin/shared';
-import { Button, MockBanner, Skeleton, StatusPill, Text } from '@/components/ui';
+import { ReasonDialog } from '@/components/admin/ReasonDialog';
+import { DOCUMENT_KIND_LABELS, InfoRow, InfoRows, LISTING_STYLE, Note } from '@/components/admin/shared';
+import { Button, Skeleton, StatusPill, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
 
 export default function VehicleVerificationPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
-  const { staff } = useAdminSession();
 
-  const { data: vehicle, loading, refresh } = useAsyncData(() => apiClient.getVehicle(id), [id]);
+  const { data: vehicle, loading, error, refresh } = useAsyncData(() => apiClient.getVehicle(id), [id]);
+
+  // Which listing decision is being made, while the reason dialog is open.
+  const [listingDecision, setListingDecision] = useState<'live' | 'down' | null>(null);
+
+  // Could not be fetched is not the same as "no such vehicle". See LoadFailed.
+  if (error) return <LoadFailed title="Vehicle" what="This vehicle" error={error} onRetry={refresh} />;
 
   if (loading) return <Skeleton height={420} />;
 
@@ -44,7 +59,20 @@ export default function VehicleVerificationPage() {
 
   const label = `${vehicle.make} ${vehicle.model} ${vehicle.year}`;
   const pending = vehicle.documents.filter((d) => d.status === 'pending').length;
+  const notApproved = vehicle.documents.filter((d) => d.status !== 'approved');
   const listing = LISTING_STYLE[vehicle.listingStatus];
+  const isLive = vehicle.listingStatus === 'live';
+
+  // Said in the dialog when putting a car live with paperwork still open —
+  // never used to stop it. See the note at the top of this file.
+  const paperworkWarning =
+    notApproved.length === 0
+      ? vehicle.documents.length === 0
+        ? 'No documents have been uploaded for this vehicle.'
+        : 'All of its documents are approved.'
+      : `Not yet approved: ${notApproved
+          .map((d) => (DOCUMENT_KIND_LABELS[d.kind] ?? d.kind).toLowerCase())
+          .join(', ')}.`;
 
   return (
     <>
@@ -54,43 +82,77 @@ export default function VehicleVerificationPage() {
         actions={<Button label="Back to Vehicles" href="/vehicles" variant="ghost" size="md" />}
       />
 
-      <MockBanner />
-
       <div className={styles.detailGrid}>
         <div className={styles.detailStack}>
           <PageCard
-            title="Documents"
+            title="The Paperwork"
             subtitle={
-              pending === 0
-                ? 'Everything here has been read'
-                : `${pending} still to read`
+              vehicle.documents.length === 0
+                ? 'Nothing uploaded yet'
+                : pending === 0
+                  ? 'Everything here has been read'
+                  : `${pending} still to read`
             }
           >
-            <div className={styles.docList}>
-              {vehicle.documents.map((document) => (
-                <DocumentReview
-                  key={document.kind}
-                  document={document}
-                  subjectType="vehicle"
-                  subjectId={vehicle.id}
-                  subjectLabel={`${label} · ${vehicle.reference}`}
-                  onDecided={async (decision, reason) => {
-                    await apiClient.reviewVehicleDocument(
-                      vehicle.id,
-                      document.kind,
-                      decision,
-                      reason,
-                      staff?.name ?? 'Unknown',
-                    );
-                    refresh();
-                  }}
-                />
-              ))}
-            </div>
+            {vehicle.documents.length === 0 ? (
+              <Note>
+                The business has not uploaded any documents for this vehicle yet. There is nothing
+                to read until they do.
+              </Note>
+            ) : (
+              <div className={styles.docList}>
+                {vehicle.documents.map((document) => (
+                  <DocumentReview
+                    // The document's own id: a car can have had more than one
+                    // insurance certificate, and each is read on its own.
+                    key={document.id}
+                    document={document}
+                    subjectLabel={`${label} · ${vehicle.reference}`}
+                    onDecided={async (approve, reason) => {
+                      await apiClient.reviewVehicleDocument(document.id, approve, reason);
+                      refresh();
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </PageCard>
         </div>
 
         <div className={styles.detailStack}>
+          <PageCard title="The Listing" subtitle="Whether customers can find and book it">
+            <InfoRows>
+              <InfoRow label="Listing" value={<StatusPill label={listing.label} tone={listing.tone} />} />
+            </InfoRows>
+
+            <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+              {!isLive ? (
+                <Button
+                  label="Put This Vehicle Live"
+                  variant="primary"
+                  size="md"
+                  onClick={() => setListingDecision('live')}
+                />
+              ) : null}
+              {vehicle.listingStatus !== 'suspended' ? (
+                <Button
+                  label="Take This Vehicle Down"
+                  variant="outline"
+                  size="md"
+                  onClick={() => setListingDecision('down')}
+                />
+              ) : null}
+            </div>
+
+            <div style={{ marginTop: 'var(--space-lg)' }}>
+              <Note>
+                A separate decision from the paperwork. Approving every document does not put the
+                car live, and rejecting one does not take it down — both are done here, on purpose,
+                with a reason.
+              </Note>
+            </div>
+          </PageCard>
+
           <PageCard title="Vehicle">
             <InfoRows>
               <InfoRow label="Reference" value={vehicle.reference} />
@@ -102,18 +164,7 @@ export default function VehicleVerificationPage() {
                 label="Side of the island"
                 value={vehicle.side === 'dutch' ? 'Dutch · Sint Maarten' : 'French · Saint-Martin'}
               />
-              <InfoRow
-                label="Listing"
-                value={<StatusPill label={listing.label} tone={listing.tone} />}
-              />
             </InfoRows>
-
-            <div style={{ marginTop: 'var(--space-lg)' }}>
-              <Note>
-                The listing state follows from the documents. All three approved and it goes
-                live; anything unread and it waits; anything rejected and it is suspended.
-              </Note>
-            </div>
           </PageCard>
 
           <PageCard title="Business">
@@ -138,12 +189,37 @@ export default function VehicleVerificationPage() {
               covers rental use. Whether the certificate is for this registration. Whether the
               dates make sense.
             </Text>
-            <Text variant="small" tone="ink3" as="p" raw style={{ marginTop: 'var(--space-md)' }}>
-              So there is no per-check cost here, only the time it takes to read them.
-            </Text>
           </PageCard>
         </div>
       </div>
+
+      <ReasonDialog
+        open={listingDecision !== null}
+        onClose={() => setListingDecision(null)}
+        title={listingDecision === 'live' ? 'Put this vehicle live' : 'Take this vehicle down'}
+        description={
+          listingDecision === 'live'
+            ? `Customers will be able to find and book it straight away. ${paperworkWarning}`
+            : 'It stops appearing to customers straight away. Bookings already made are not cancelled.'
+        }
+        confirmLabel={listingDecision === 'live' ? 'Put live' : 'Take down'}
+        destructive={listingDecision === 'down'}
+        reasonPlaceholder={
+          listingDecision === 'live'
+            ? 'e.g. Registration, insurance and roadworthiness all read and current.'
+            : 'e.g. Insurance lapsed on 14 June — down until the renewal is uploaded.'
+        }
+        change={{
+          subjectLabel: `${label} · ${vehicle.reference}`,
+          field: 'Listing',
+          before: listing.label,
+          after: listingDecision === 'live' ? LISTING_STYLE.live.label : LISTING_STYLE.suspended.label,
+        }}
+        onConfirm={async (reason) => {
+          await apiClient.decideVehicleListing(vehicle.id, listingDecision === 'live', reason);
+          refresh();
+        }}
+      />
     </>
   );
 }

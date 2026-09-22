@@ -32,7 +32,7 @@ const change = {
   after: '1,740',
 };
 
-function setup(onConfirm: ReturnType<typeof vi.fn> = vi.fn(), extra: { amountMax?: number } = {}) {
+async function setup(onConfirm: ReturnType<typeof vi.fn> = vi.fn(), extra: { amountMax?: number } = {}) {
   const onClose = vi.fn();
   render(
     <ReasonDialog
@@ -45,14 +45,33 @@ function setup(onConfirm: ReturnType<typeof vi.fn> = vi.fn(), extra: { amountMax
       onConfirm={onConfirm}
     />,
   );
+
+  // WAIT FOR THE DIALOG TO PUT THE CURSOR IN ITS FIRST BOX. It does that a
+  // moment after it opens — one animation frame — and a click made inside that
+  // moment loses its focus to it, so whatever is typed next lands in the wrong
+  // box. A person cannot click that fast; a test can, and did: a reason pasted
+  // into the amount box read "…photographed at return.600". Every test here
+  // waits for the dialog to settle before touching it.
+  await waitFor(() => expect(document.activeElement?.tagName).toMatch(/^(INPUT|TEXTAREA)$/));
+
   return { onConfirm, onClose };
 }
 
 const confirmButton = () => screen.getByRole('button', { name: /adjust points/i });
 
+// Puts a whole reason into the box in one go, the way pasting does. Typing a
+// sixty-character sentence one key at a time is what these tests used to do,
+// and on a slow, busy machine it took long enough to fail for reasons that had
+// nothing to do with the dialog. What is being checked here is what happens to
+// the reason, not how fast a keyboard is.
+async function enterReason(user: ReturnType<typeof userEvent.setup>, text: string) {
+  await user.click(screen.getByLabelText(/reason/i));
+  await user.paste(text);
+}
+
 describe('a change cannot be made without a reason', () => {
-  it('will not go through with the reason box empty', () => {
-    const { onConfirm } = setup();
+  it('will not go through with the reason box empty', async () => {
+    const { onConfirm } = await setup();
 
     expect(confirmButton()).toBeDisabled();
     expect(onConfirm).not.toHaveBeenCalled();
@@ -60,7 +79,7 @@ describe('a change cannot be made without a reason', () => {
 
   it('will not accept a reason too short to mean anything', async () => {
     const user = userEvent.setup();
-    setup();
+    await setup();
 
     await user.type(screen.getByLabelText(/reason/i), 'ok');
 
@@ -69,18 +88,18 @@ describe('a change cannot be made without a reason', () => {
 
   it('sends the reason to the server exactly as it was written', async () => {
     const user = userEvent.setup();
-    const { onConfirm } = setup();
+    const { onConfirm } = await setup();
 
     const reason = 'Goodwill after the vehicle was delivered two hours late.';
-    await user.type(screen.getByLabelText(/reason/i), `  ${reason}  `);
+    await enterReason(user, `  ${reason}  `);
     await user.click(confirmButton());
 
     // Trimmed, and otherwise untouched. The server writes this into the log.
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(reason, undefined));
   });
 
-  it('stops at the thousand characters the server will accept', () => {
-    setup();
+  it('stops at the thousand characters the server will accept', async () => {
+    await setup();
 
     // A longer reason would be refused outright by the server, so the box
     // simply stops taking more rather than letting somebody write one and have
@@ -88,8 +107,8 @@ describe('a change cannot be made without a reason', () => {
     expect(screen.getByLabelText(/reason/i)).toHaveAttribute('maxLength', '1000');
   });
 
-  it('shows what is about to change before it changes', () => {
-    setup();
+  it('shows what is about to change before it changes', async () => {
+    await setup();
 
     expect(screen.getByText('1,240')).toBeInTheDocument();
     expect(screen.getByText('1,740')).toBeInTheDocument();
@@ -109,9 +128,9 @@ describe('a failed change never looks like one that went through', () => {
         message: 'A deposit is still being held for this account. It cannot be closed yet.',
       }),
     );
-    const { onClose } = setup(refusing);
+    const { onClose } = await setup(refusing);
 
-    await user.type(screen.getByLabelText(/reason/i), reason);
+    await enterReason(user, reason);
     await user.click(confirmButton());
 
     expect(
@@ -129,9 +148,9 @@ describe('a failed change never looks like one that went through', () => {
     const user = userEvent.setup();
     // The request went out; no answer came back. It may well have landed.
     const dropped = vi.fn().mockRejectedValue(new NetworkError('The request took too long.'));
-    setup(dropped);
+    await setup(dropped);
 
-    await user.type(screen.getByLabelText(/reason/i), reason);
+    await enterReason(user, reason);
     await user.click(confirmButton());
 
     expect(await screen.findByText(/could not confirm whether this went through/i)).toBeInTheDocument();
@@ -144,18 +163,18 @@ describe('keeping part of a deposit needs an amount the server will accept', () 
 
   it('will not go through without an amount', async () => {
     const user = userEvent.setup();
-    setup(vi.fn(), { amountMax: 500 });
+    await setup(vi.fn(), { amountMax: 500 });
 
-    await user.type(screen.getByLabelText(/reason/i), reason);
+    await enterReason(user, reason);
 
     expect(confirmButton()).toBeDisabled();
   });
 
   it('refuses more than is being held', async () => {
     const user = userEvent.setup();
-    setup(vi.fn(), { amountMax: 500 });
+    await setup(vi.fn(), { amountMax: 500 });
 
-    await user.type(screen.getByLabelText(/reason/i), reason);
+    await enterReason(user, reason);
     await user.type(screen.getByLabelText(/amount to keep/i), '600');
     await user.tab();
 
@@ -165,14 +184,15 @@ describe('keeping part of a deposit needs an amount the server will accept', () 
 
   it('accepts dollars and cents exactly as typed — including amounts a computer rounds badly', async () => {
     const user = userEvent.setup();
-    const { onConfirm } = setup(vi.fn(), { amountMax: 500 });
+    const { onConfirm } = await setup(vi.fn(), { amountMax: 500 });
 
-    await user.type(screen.getByLabelText(/reason/i), reason);
+    await enterReason(user, reason);
     // 2.30 × 100 is 229.99999999999997 to a computer. A check built on that
     // arithmetic would refuse a perfectly ordinary amount.
     await user.type(screen.getByLabelText(/amount to keep/i), '2.30');
     await user.click(confirmButton());
 
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith(reason, 2.3));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0]).toEqual([reason, 2.3]);
   });
 });

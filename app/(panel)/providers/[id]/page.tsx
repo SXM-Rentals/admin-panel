@@ -2,13 +2,21 @@
 
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
-// WHAT THIS FILE DOES: One rental business in full — who they legally are, what
-// they have filed, whether Stripe can pay them, and how big their fleet is.
+// WHAT THIS FILE DOES: One rental business in full — who they legally are, who is
+// behind them, what they offer, and the vehicles they have listed.
 //
-// THE OUTSTANDING LIST IS SPELLED OUT rather than summarised as a status. "Stripe
-// is waiting for a photo of the director's passport and proof of the business
-// bank account" is something a member of staff can ring up and say. "Restricted"
-// is not.
+// SEVERAL THINGS THIS SCREEN USED TO SHOW ARE NOT SHOWN, ON PURPOSE. The SXM
+// Rentals server does not yet send a business's own paperwork, its Stripe
+// payout account, or any way to edit a business's details or close it. The
+// screen used to show all of those, filled in with sample data. Rather than
+// quietly dropping them — which would leave somebody hunting for them — each
+// says in one line that it is not connected yet.
+//
+// TURNING A BUSINESS DOWN DOES NOT TAKE ITS VEHICLES OFF THE SITE. That is how
+// the server works today: whether a customer can find and book a car depends
+// on that car's own listing, and nothing else. So the fleet below links straight
+// to each vehicle's listing decision, because that is where a car is actually
+// taken down.
 
 import React from 'react';
 import Link from 'next/link';
@@ -17,27 +25,20 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, longDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
-import {
-  DOCUMENT_KIND_LABELS,
-  DOCUMENT_STYLE,
-  InfoRow,
-  InfoRows,
-  Note,
-  PAYOUT_STYLE,
-  VerificationPill,
-  YesNo,
-} from '@/components/admin/shared';
-import { EditableRow } from '@/components/admin/EditableRow';
-import { CloseAccount } from '@/components/admin/CloseAccount';
-import { Button, Icon, MockBanner, Skeleton, StatusPill, Text } from '@/components/ui';
+import { LoadFailed } from '@/components/layout/LoadFailed';
+import { InfoRow, InfoRows, LISTING_STYLE, Note, VerificationPill, YesNo } from '@/components/admin/shared';
+import { Button, Icon, Skeleton, StatusPill, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
 
 export default function ProviderDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
 
-  const { data: provider, loading, refresh } = useAsyncData(() => apiClient.getProvider(id), [id]);
+  const { data: provider, loading, error, refresh } = useAsyncData(() => apiClient.getProvider(id), [id]);
   const { data: vehicles } = useAsyncData(() => apiClient.listVehicles(), []);
+
+  // Could not be fetched is not the same as "no such business". See LoadFailed.
+  if (error) return <LoadFailed title="Business" what="This business" error={error} onRetry={refresh} />;
 
   if (loading) return <Skeleton height={420} />;
 
@@ -50,7 +51,6 @@ export default function ProviderDetailPage() {
     );
   }
 
-  const payoutStyle = PAYOUT_STYLE[provider.payoutAccount.status];
   const theirVehicles = (vehicles ?? []).filter((v) => v.providerId === provider.id);
 
   return (
@@ -61,7 +61,7 @@ export default function ProviderDetailPage() {
         actions={
           <>
             <Button
-              label="Review Documents"
+              label="Verification Decision"
               href={`/providers/${provider.id}/verification`}
               variant="secondary"
               size="md"
@@ -71,61 +71,15 @@ export default function ProviderDetailPage() {
         }
       />
 
-      <MockBanner />
-
       <div className={styles.detailGrid}>
         <div className={styles.detailStack}>
           <PageCard title="Business">
             <InfoRows>
-              {/* Edited one field at a time, each with its own reason and its own
-                  audit entry — see the note at the top of EditableRow. */}
-              <EditableRow
-                label="Trading name"
-                value={provider.businessName}
-                subjectType="provider"
-                subjectId={provider.id}
-                subjectLabel={provider.businessName}
-                onSave={async (next) => {
-                  await apiClient.updateProvider(provider.id, 'businessName', next);
-                  refresh();
-                }}
-              />
-              <EditableRow
-                label="Legal name"
-                value={provider.legalName}
-                subjectType="provider"
-                subjectId={provider.id}
-                subjectLabel={provider.businessName}
-                onSave={async (next) => {
-                  await apiClient.updateProvider(provider.id, 'legalName', next);
-                  refresh();
-                }}
-              />
+              <InfoRow label="Trading name" value={provider.businessName} />
+              <InfoRow label="Legal name" value={provider.legalName || 'Not supplied'} />
               <InfoRow label="Registration number" value={provider.registrationNumber ?? 'Not supplied'} />
-              <EditableRow
-                label="Contact email"
-                value={provider.contactEmail}
-                inputType="email"
-                subjectType="provider"
-                subjectId={provider.id}
-                subjectLabel={provider.businessName}
-                onSave={async (next) => {
-                  await apiClient.updateProvider(provider.id, 'contactEmail', next);
-                  refresh();
-                }}
-              />
-              <EditableRow
-                label="Business phone"
-                value={provider.phone}
-                inputType="tel"
-                subjectType="provider"
-                subjectId={provider.id}
-                subjectLabel={provider.businessName}
-                onSave={async (next) => {
-                  await apiClient.updateProvider(provider.id, 'phone', next);
-                  refresh();
-                }}
-              />
+              <InfoRow label="Contact email" value={provider.contactEmail || 'Not supplied'} />
+              <InfoRow label="Business phone" value={provider.phone} />
               <InfoRow
                 label="Website"
                 value={
@@ -154,6 +108,13 @@ export default function ProviderDetailPage() {
                 value={<VerificationPill status={provider.verificationStatus} />}
               />
             </InfoRows>
+
+            <div style={{ marginTop: 'var(--space-lg)' }}>
+              <Note>
+                These details cannot be edited from the panel yet — the SXM Rentals server does not
+                offer it. A business changes them itself, from its own account.
+              </Note>
+            </div>
           </PageCard>
 
           <PageCard title="What They Offer">
@@ -171,23 +132,33 @@ export default function ProviderDetailPage() {
               />
             </InfoRows>
 
-            <div style={{ marginTop: 'var(--space-lg)' }}>
-              <Text variant="small" tone="ink2" as="p" raw>
-                {provider.description}
-              </Text>
-            </div>
+            {provider.description ? (
+              <div style={{ marginTop: 'var(--space-lg)' }}>
+                <Text variant="small" tone="ink2" as="p" raw>
+                  {provider.description}
+                </Text>
+              </div>
+            ) : null}
           </PageCard>
 
           <PageCard
             title="Fleet"
-            subtitle={`${theirVehicles.length} ${theirVehicles.length === 1 ? 'vehicle' : 'vehicles'} listed`}
+            subtitle={
+              theirVehicles.length < provider.vehicleCount
+                ? `Showing ${theirVehicles.length} of ${provider.vehicleCount} vehicles`
+                : `${provider.vehicleCount} ${provider.vehicleCount === 1 ? 'vehicle' : 'vehicles'}`
+            }
           >
             {theirVehicles.length === 0 ? (
-              <Note>This business has no vehicles listed yet.</Note>
+              <Note>
+                {provider.vehicleCount === 0
+                  ? 'This business has no vehicles listed yet.'
+                  : 'Their vehicles are not among the most recent the server sent. Search for them on the Vehicles screen.'}
+              </Note>
             ) : (
               <div className={styles.linkList}>
                 {theirVehicles.map((vehicle) => {
-                  const pending = vehicle.documents.filter((d) => d.status === 'pending').length;
+                  const listing = LISTING_STYLE[vehicle.listingStatus];
                   return (
                     <Link
                       key={vehicle.id}
@@ -203,114 +174,81 @@ export default function ProviderDetailPage() {
                           {vehicle.reference} · {money(vehicle.dailyRate)} a day
                         </Text>
                       </span>
-                      {pending > 0 ? (
-                        <StatusPill label={`${pending} to read`} tone="warning" />
-                      ) : (
-                        <StatusPill label="Documents clear" tone="success" />
-                      )}
+                      <StatusPill label={listing.label} tone={listing.tone} />
                       <Icon name="chevron-forward" size={16} color="var(--ink3)" />
                     </Link>
                   );
                 })}
               </div>
             )}
+
+            <div style={{ marginTop: 'var(--space-lg)' }}>
+              <Note icon="warning-outline" tone="ink2">
+                Whether customers can book a car depends on that car&rsquo;s own listing, not on this
+                business being verified. To take a car off the site, open it and take its listing
+                down.
+              </Note>
+            </div>
           </PageCard>
 
-          {/* ---- CLOSING THE BUSINESS ----
-              Last, and behind the same safety check as a customer account, plus
-              one of its own: a business with vehicles still listed cannot be
-              closed, or the site would keep taking bookings for cars nobody is
-              behind. */}
-          <PageCard title="Close Business Account">
-            <CloseAccount
-              subjectType="provider"
-              subjectId={provider.id}
-              subjectLabel={provider.businessName}
-              currentState={`${provider.verificationStatus === 'approved' ? 'Verified' : 'Pending'} · ${provider.vehicleCount} vehicles · ${provider.bookingCount} lifetime bookings`}
-              check={() => apiClient.canCloseProvider(provider.id)}
-              onClose={async () => {
-                await apiClient.closeProvider(provider.id);
-                refresh();
-              }}
-            />
+          <PageCard title="Close Business Account" subtitle="Not connected yet">
+            <Note>
+              Closing a business is not something the SXM Rentals server offers yet. To stop a
+              business trading in the meantime, take each of its vehicles down from its own vehicle
+              screen.
+            </Note>
           </PageCard>
         </div>
 
         <div className={styles.detailStack}>
           {/* ---- THE PERSON BEHIND THE BUSINESS ----
-              Sits above the payout account on purpose: when a payout is stuck or
-              a deposit is disputed, the next thing anybody needs is the name and
-              number of whoever can actually do something about it. */}
+              Near the top on purpose: when a payout is stuck or a deposit is
+              disputed, the next thing anybody needs is the name and number of
+              whoever can actually do something about it. */}
           <PageCard title="Owner">
             <InfoRows>
-              <EditableRow
-                label="Name"
-                value={provider.ownerName}
-                auditField="Owner name"
-                subjectType="provider"
-                subjectId={provider.id}
-                subjectLabel={provider.businessName}
-                onSave={async (next) => {
-                  await apiClient.updateProvider(provider.id, 'ownerName', next);
-                  refresh();
-                }}
-              />
+              <InfoRow label="Name" value={provider.ownerName || 'Not supplied'} />
             </InfoRows>
 
-            {/* The number gets its own block rather than a label-and-value row.
-                In this narrow right-hand column a phone number and a pill do not
-                fit on one line beside a label, and it was breaking mid-number —
-                which is the one piece of text on the screen somebody is going to
-                read out loud or copy. */}
-            <div className={styles.ownerNumber}>
-              <Text variant="caption" tone="ink3" as="p" raw>
-                PERSONAL NUMBER
-              </Text>
-              <div className={styles.pillRow}>
-                <Text variant="label" as="span" raw>
-                  {provider.ownerPhone}
-                </Text>
-                <StatusPill label="Personal" tone="warning" dot={false} />
-              </div>
-            </div>
+            {provider.ownerPhone ? (
+              <>
+                {/* The number gets its own block rather than a label-and-value
+                    row. In this narrow right-hand column a phone number and a
+                    pill do not fit on one line beside a label, and it was
+                    breaking mid-number — which is the one piece of text on the
+                    screen somebody is going to read out loud or copy. */}
+                <div className={styles.ownerNumber}>
+                  <Text variant="caption" tone="ink3" as="p" raw>
+                    PERSONAL NUMBER
+                  </Text>
+                  <div className={styles.pillRow}>
+                    <Text variant="label" as="span" raw>
+                      {provider.ownerPhone}
+                    </Text>
+                    <StatusPill label="Personal" tone="warning" dot={false} />
+                  </div>
+                </div>
 
-            <div style={{ marginTop: 'var(--space-lg)' }}>
-              <Note icon="warning-outline" tone="ink2">
-                This is {provider.ownerName.split(' ')[0]}’s own mobile, not the business line.
-                Use it when something actually needs sorting out — a stuck payout, a disputed
-                deposit — and keep it inside this panel.
-              </Note>
-            </div>
+                <div style={{ marginTop: 'var(--space-lg)' }}>
+                  <Note icon="warning-outline" tone="ink2">
+                    This is {provider.ownerName ? `${provider.ownerName.split(' ')[0]}’s` : 'the owner’s'}{' '}
+                    own mobile, not the business line. Use it when something actually needs sorting
+                    out — a stuck payout, a disputed deposit — and keep it inside this panel.
+                  </Note>
+                </div>
+              </>
+            ) : null}
           </PageCard>
 
-          {/* ---- GETTING PAID ---- */}
-          <PageCard title="Payout Account">
-            <InfoRows>
-              <InfoRow label="Status" value={<StatusPill label={payoutStyle.label} tone={payoutStyle.tone} />} />
-              <InfoRow label="Payouts enabled" value={<YesNo done={provider.payoutAccount.payoutsEnabled} yes="Yes" no="No" />} />
-              <InfoRow label="Stripe account" value={provider.payoutAccount.stripeAccountId ?? 'None yet'} />
-              <InfoRow label="Country" value={provider.payoutAccount.country} />
-            </InfoRows>
-
-            {provider.payoutAccount.outstanding.length > 0 ? (
-              <div className={styles.openQuestion} style={{ marginTop: 'var(--space-lg)' }}>
-                <Icon name="warning-outline" size={16} color="var(--warning)" />
-                <div>
-                  <Text variant="label" as="p" raw>
-                    Stripe is still waiting for
-                  </Text>
-                  <ul style={{ marginTop: 6 }}>
-                    {provider.payoutAccount.outstanding.map((item) => (
-                      <li key={item}>
-                        <Text variant="small" tone="ink2" as="span" raw>
-                          · {item}
-                        </Text>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ) : null}
+          {/* ---- GETTING PAID ----
+              Kept as a card rather than left out, because it is the first thing
+              anybody looks for when a business rings about money. */}
+          <PageCard title="Payout Account" subtitle="Not connected yet">
+            <Note>
+              The server keeps whether this business&rsquo;s Stripe account can receive money, but it
+              does not send it to the admin panel yet. Money already sent to them shows as payout
+              lines in the ledger on the Payments screen.
+            </Note>
           </PageCard>
 
           <PageCard title="Trading">
@@ -326,36 +264,6 @@ export default function ProviderDetailPage() {
                   See this business’s bookings →
                 </Text>
               </Link>
-            </div>
-          </PageCard>
-
-          <PageCard title="Filed Documents">
-            <div className={styles.docList}>
-              {provider.documents.map((doc) => {
-                const style = DOCUMENT_STYLE[doc.status];
-                return (
-                  <div key={doc.kind} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div className={styles.pillRow}>
-                      <Text variant="label" as="span" raw>
-                        {DOCUMENT_KIND_LABELS[doc.kind] ?? doc.kind}
-                      </Text>
-                      <StatusPill label={style.label} tone={style.tone} />
-                    </div>
-                    <Text variant="small" tone="ink3" as="p" raw>
-                      {doc.fileName} · filed {longDate(doc.uploadedAt)}
-                    </Text>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div style={{ marginTop: 'var(--space-lg)' }}>
-              <Button
-                label="Review Documents"
-                href={`/providers/${provider.id}/verification`}
-                variant="secondary"
-                size="sm"
-              />
             </div>
           </PageCard>
         </div>

@@ -12,21 +12,6 @@ import { Icon, type IconName } from './Icon';
 import { Button } from './Button';
 import styles from './Feedback.module.css';
 
-// ---- MOCK BANNER ----
-// Says plainly that the site is running on sample data. It stays on screen until
-// there is a real backend, because a demo that looks live is how somebody ends
-// up believing they have booked a car that does not exist.
-export function MockBanner({ className }: { className?: string }) {
-  return (
-    <div className={cx(styles.mockBanner, className)} data-print="hide">
-      <Icon name="information-circle-outline" size={16} />
-      <Text variant="small" as="span" style={{ color: 'inherit' }}>
-        Demo mode — sample data, not connected to a backend.
-      </Text>
-    </div>
-  );
-}
-
 // ---- STATUS PILL ----
 // The small coloured label saying "Upcoming", "Deposit Held", "Paid".
 export type StatusTone = 'neutral' | 'success' | 'warning' | 'danger' | 'brand';

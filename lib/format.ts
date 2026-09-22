@@ -9,10 +9,26 @@ import dayjs from 'dayjs';
 
 // ---- MONEY ----
 // The island uses US dollars for tourism pricing, so that is the default.
+//
+// CENTS ARE SHOWN WHENEVER THERE ARE ANY. This used to round every figure to the
+// whole dollar, which looked tidy while the sample data was all whole dollars
+// and quietly breaks against real bookings. Three days at $45 is $135, split
+// $94.50 to the business and $40.50 kept — which, rounded, reads "$95 + $41 =
+// $135". On the screen whose whole job is to show the split visibly adding up,
+// that is a sum that visibly does not. So a whole amount still reads "$45", and
+// anything with cents reads "$94.50".
+//
+// Rounded to the cent first, because to a computer 0.1 + 0.2 is
+// 0.30000000000000004, and a figure like that must never decide whether cents
+// appear.
 
 export function money(amount: number, options?: { decimals?: boolean }): string {
-  const showDecimals = options?.decimals ?? false;
-  return showDecimals ? `$${amount.toFixed(2)}` : `$${Math.round(amount).toLocaleString()}`;
+  const cents = Math.round(amount * 100);
+  const showDecimals = options?.decimals ?? cents % 100 !== 0;
+  return `$${(cents / 100).toLocaleString(undefined, {
+    minimumFractionDigits: showDecimals ? 2 : 0,
+    maximumFractionDigits: showDecimals ? 2 : 0,
+  })}`;
 }
 
 // "$45/day" as shown on a car card.

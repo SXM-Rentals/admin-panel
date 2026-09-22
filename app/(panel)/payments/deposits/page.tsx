@@ -25,12 +25,13 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, shortDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { ReasonDialog } from '@/components/admin/ReasonDialog';
 import { StatGrid, StatTile } from '@/components/admin/StatTile';
 import { DEPOSIT_STYLE, DepositNotRevenueNote, Quote } from '@/components/admin/shared';
-import { Button, MockBanner, StatusPill, Text } from '@/components/ui';
+import { Button, StatusPill, Text } from '@/components/ui';
 import type { DepositLedgerEntry, DepositStatus } from '@/types';
 
 type StatusFilter = 'all' | DepositStatus;
@@ -40,7 +41,7 @@ export default function DepositsLedgerPage() {
   const [status, setStatus] = useState<StatusFilter>('all');
   const [acting, setActing] = useState<{ deposit: DepositLedgerEntry; action: 'claim' | 'release' } | null>(null);
 
-  const { data: deposits, loading, refresh } = useAsyncData(() => apiClient.getDeposits(), []);
+  const { data: deposits, loading, error, refresh } = useAsyncData(() => apiClient.getDeposits(), []);
 
   const all = deposits ?? [];
 
@@ -57,6 +58,14 @@ export default function DepositsLedgerPage() {
 
   const sumWhere = (predicate: (d: DepositLedgerEntry) => boolean) =>
     all.filter(predicate).reduce((t, d) => t + d.amount, 0);
+
+  // WHAT WAS ACTUALLY KEPT, NOT WHAT WAS HELD. Part of a deposit can be kept —
+  // $240 against a kerbed wheel, the rest returned — so adding up the whole
+  // deposit for every claim would overstate what the platform kept by the part
+  // that went back. The server says how much of each was kept; a claim from
+  // before it did is counted whole.
+  const keptOf = (d: DepositLedgerEntry) => d.claimedAmount ?? d.amount;
+  const totalKept = all.filter((d) => d.status === 'claimed').reduce((t, d) => t + keptOf(d), 0);
 
   const columns: Column<DepositLedgerEntry>[] = [
     {
@@ -87,8 +96,9 @@ export default function DepositsLedgerPage() {
     {
       id: 'authorized',
       header: 'Authorised',
-      sortValue: (d) => d.authorizedAt,
-      cell: (d) => shortDate(d.authorizedAt),
+      sortValue: (d) => d.authorizedAt ?? '',
+      // A deposit that was never taken has no moment of authorising to show.
+      cell: (d) => (d.authorizedAt ? shortDate(d.authorizedAt) : 'Not taken'),
     },
     {
       id: 'settled',
@@ -98,7 +108,10 @@ export default function DepositsLedgerPage() {
         d.releasedAt ? (
           <CellStack title={shortDate(d.releasedAt)} detail="released in full" />
         ) : d.claimedAt ? (
-          <CellStack title={shortDate(d.claimedAt)} detail="claimed against damage" />
+          <CellStack
+            title={shortDate(d.claimedAt)}
+            detail={`kept ${money(keptOf(d))} of ${money(d.amount)}`}
+          />
         ) : (
           <Text variant="small" tone="ink3" as="span" raw>
             Still open
@@ -116,14 +129,15 @@ export default function DepositsLedgerPage() {
 
   const countBy = (s: DepositStatus) => all.filter((d) => d.status === s).length;
 
+  // Could not be fetched is not the same as none on file. See LoadFailed.
+  if (error) return <LoadFailed title="Deposits" what="The deposits" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
         title="Deposits"
         description="Every security deposit through its life: authorised, held, and then released back or claimed against damage."
       />
-
-      <MockBanner />
 
       <StatGrid>
         <StatTile
@@ -141,9 +155,9 @@ export default function DepositsLedgerPage() {
         />
         <StatTile
           icon="alert-circle-outline"
-          label="Claimed"
-          value={money(sumWhere((d) => d.status === 'claimed'))}
-          detail="Kept against damage, each with a reason on file"
+          label="Kept against damage"
+          value={money(totalKept)}
+          detail="Only the part of each claimed deposit that was kept, each with a reason on file"
         />
         <StatTile
           icon="documents-outline"
@@ -219,7 +233,8 @@ export default function DepositsLedgerPage() {
               .map((d) => (
                 <div key={d.id}>
                   <Text variant="label" as="p" raw>
-                    {d.bookingRef} · {d.customerName} · {money(d.amount)} deposit
+                    {d.bookingRef} · {d.customerName} · kept {money(keptOf(d))} of a{' '}
+                    {money(d.amount)} deposit
                   </Text>
                   <Quote>{d.claimReason ?? 'No reason was recorded — this should not happen.'}</Quote>
                 </div>
@@ -242,7 +257,7 @@ export default function DepositsLedgerPage() {
         description={
           acting
             ? acting.action === 'claim'
-              ? `Keeping part or all of ${money(acting.deposit.amount)} from ${acting.deposit.customerName}. Write what the damage was, what it cost, and what goes back.`
+              ? `Keeping part or all of the ${money(acting.deposit.amount)} held from ${acting.deposit.customerName}. Enter how much to keep — whatever is not kept goes back to them — and write what the damage was and what it cost.`
               : `Returning ${money(acting.deposit.amount)} to ${acting.deposit.customerName} in full.`
             : undefined
         }
@@ -259,12 +274,19 @@ export default function DepositsLedgerPage() {
           before: `Held · ${money(acting?.deposit.amount ?? 0)}`,
           after: acting?.action === 'claim' ? 'Claimed' : 'Released',
         }}
-        onConfirm={async (reason) => {
+        // Only a claim asks for an amount, and never more than is held.
+        amount={
+          acting?.action === 'claim'
+            ? { label: 'Amount to keep', max: acting.deposit.amount }
+            : undefined
+        }
+        onConfirm={async (reason, amount) => {
           if (!acting) return;
           if (acting.action === 'claim') {
-            await apiClient.claimDeposit(acting.deposit.id, reason);
+            // The dialog will not let this through without a valid amount.
+            await apiClient.claimDeposit(acting.deposit.id, amount ?? 0, reason);
           } else {
-            await apiClient.releaseDeposit(acting.deposit.id);
+            await apiClient.releaseDeposit(acting.deposit.id, reason);
           }
           refresh();
         }}

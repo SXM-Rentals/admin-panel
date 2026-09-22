@@ -5,20 +5,6 @@
    grey blocks shown while information is still loading, the message shown when a
    list is empty, and the rating stars. */
 
-/* ---- MOCK BANNER ----
-   Says plainly that the site is running on sample data. It stays until there is
-   a real backend, because a demo that looks live is how someone ends up thinking
-   they have booked a car that does not exist. */
-.mockBanner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--warning-soft);
-  color: var(--warning);
-  border: 1px solid transparent;
-}
 
 /* ---- STATUS PILL ----
    The small coloured label saying "Upcoming", "Deposit Held", "Paid". */

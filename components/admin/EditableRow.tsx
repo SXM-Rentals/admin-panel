@@ -25,17 +25,14 @@
 import React, { useState } from 'react';
 import { ReasonDialog } from './ReasonDialog';
 import { Button, Icon, Text } from '@/components/ui';
-import type { AuditEntry } from '@/types';
 import styles from './admin.module.css';
 
 export type EditableRowProps = {
   label: string;
   value: string;
-  // What to call this field in the audit log. Usually the same as the label.
+  // What to call this field in the reason dialog. Usually the same as the label.
   auditField?: string;
-  // What the record being changed is, for the log.
-  subjectType: AuditEntry['subjectType'];
-  subjectId: string;
+  // What the record being changed is, in words, for the reason dialog.
   subjectLabel: string;
   // A fixed set of choices instead of a free-text box, e.g. Local or Tourist.
   options?: { value: string; label: string }[];
@@ -55,8 +52,6 @@ export function EditableRow({
   label,
   value,
   auditField,
-  subjectType,
-  subjectId,
   subjectLabel,
   options,
   inputType = 'text',

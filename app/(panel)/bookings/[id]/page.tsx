@@ -3,8 +3,7 @@
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
 // WHAT THIS FILE DOES: One booking in full — the dates, both parties, the money
-// split three ways, the deposit, the signed agreement, and the messages between
-// customer and business.
+// split three ways, the deposit and the signed agreement.
 //
 // THE MONEY BREAKDOWN IS THE POINT OF THIS SCREEN. Three figures that must
 // always agree: what the customer paid, what the business gets, and what the
@@ -22,8 +21,9 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import { money, longDate, daysBetween, stamp, capitalise } from '@/lib/format';
+import { money, longDate, daysBetween, capitalise } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import {
   BOOKING_STYLE,
   DEPOSIT_STYLE,
@@ -33,15 +33,17 @@ import {
   Note,
   YesNo,
 } from '@/components/admin/shared';
-import { Button, MockBanner, Skeleton, StatusPill, Text } from '@/components/ui';
+import { Button, Skeleton, StatusPill, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
 
 export default function BookingDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
 
-  const { data: booking, loading } = useAsyncData(() => apiClient.getBooking(id), [id]);
-  const { data: messages } = useAsyncData(() => apiClient.getBookingMessages(id), [id]);
+  const { data: booking, loading, error, refresh } = useAsyncData(() => apiClient.getBooking(id), [id]);
+
+  // Could not be fetched is not the same as "no such booking". See LoadFailed.
+  if (error) return <LoadFailed title="Booking" what="This booking" error={error} onRetry={refresh} />;
 
   if (loading) return <Skeleton height={420} />;
 
@@ -65,8 +67,6 @@ export default function BookingDetailPage() {
         description={`${booking.vehicleLabel} · ${booking.customerName} from ${booking.providerName}`}
         actions={<Button label="Back to Bookings" href="/bookings" variant="ghost" size="md" />}
       />
-
-      <MockBanner />
 
       <div className={styles.detailGrid}>
         <div className={styles.detailStack}>
@@ -139,36 +139,20 @@ export default function BookingDetailPage() {
             <DepositNotRevenueNote />
           </PageCard>
 
-          {/* ---- THE CONVERSATION ---- */}
-          <PageCard
-            title="Messages"
-            subtitle={
-              booking.messageCount === 0
-                ? 'No messages on this booking'
-                : `${booking.messageCount} between the customer and the business`
-            }
-          >
-            {(messages ?? []).length === 0 ? (
-              <Note>
-                Nothing was sent through the app on this booking. That is not unusual for a
-                straightforward pickup.
-              </Note>
-            ) : (
-              <div className={styles.infoRows}>
-                {(messages ?? []).map((message, i) => (
-                  <div key={i} className={styles.infoRow} style={{ alignItems: 'flex-start' }}>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <Text variant="caption" tone="ink3" as="p" raw>
-                        {message.from} · {stamp(message.at)}
-                      </Text>
-                      <Text variant="small" as="p" raw style={{ marginTop: 4 }}>
-                        {message.body}
-                      </Text>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* ---- THE CONVERSATION ----
+              Not connected yet, and said so rather than left out. The server
+              does not let staff read the messages between a customer and a
+              business, and it always reports the message count as nothing —
+              so saying "no messages on this booking" would be a guess dressed
+              up as a fact. Reading a conversation is often the first thing a
+              dispute needs, which is why the card stays and says what is
+              missing. */}
+          <PageCard title="Messages" subtitle="Not connected yet">
+            <Note>
+              Staff cannot read the conversation between the customer and the business yet — the
+              SXM Rentals server does not offer it. Until it does, this panel cannot say whether
+              any messages were sent on this booking.
+            </Note>
           </PageCard>
         </div>
 

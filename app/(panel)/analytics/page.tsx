@@ -30,16 +30,23 @@ import { bucketFor, bucketNames } from '@/lib/analytics';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, longDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { StatGrid, StatTile } from '@/components/admin/StatTile';
 import { Note } from '@/components/admin/shared';
 import { BarChart, ChartFrame, LineChart } from '@/components/charts/Chart';
-import { Icon, MockBanner, Skeleton, Text } from '@/components/ui';
+import { Icon, Skeleton, Text } from '@/components/ui';
 import { cx } from '@/lib/utils';
 import styles from '@/components/admin/admin.module.css';
 
-// The day the mock data is built around. The real version uses today's date;
-// this keeps the screen pointed at where the sample bookings actually are.
-const TODAY = '2026-09-05';
+// Today, as the date boxes show it: the person's own calendar day, not the
+// server's. This used to be a fixed date — the day the sample bookings were
+// built around — which would now point every chart at a window that ended
+// weeks ago.
+function today(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
 
 // The quick ranges, in days back from today. Named for what somebody would
 // actually ask for rather than for a number of months.
@@ -59,10 +66,13 @@ function shiftDays(iso: string, days: number): string {
 
 export default function AnalyticsPage() {
   // The dates are the single source of truth. A quick range just sets them.
-  const [start, setStart] = useState(() => shiftDays(TODAY, 365));
-  const [end, setEnd] = useState(TODAY);
+  // Fixed for as long as the screen is open, so a range picked just before
+  // midnight does not shift under somebody's feet.
+  const [todayISO] = useState(today);
+  const [start, setStart] = useState(() => shiftDays(todayISO, 365));
+  const [end, setEnd] = useState(todayISO);
 
-  const { data: series, loading } = useAsyncData(
+  const { data: series, loading, error, refresh } = useAsyncData(
     () => apiClient.getSeries(start, end),
     [start, end],
   );
@@ -74,7 +84,7 @@ export default function AnalyticsPage() {
   // unlight themselves — no second piece of state to keep in step.
   const activeQuick = QUICK_RANGES.find(
     (r) => r.days === Math.round((new Date(end).getTime() - new Date(start).getTime()) / 86_400_000)
-      && end === TODAY,
+      && end === todayISO,
   )?.id;
 
   // A range typed backwards is the one mistake this control invites, so it is
@@ -99,9 +109,12 @@ export default function AnalyticsPage() {
   );
 
   const applyQuick = (days: number) => {
-    setStart(shiftDays(TODAY, days));
-    setEnd(TODAY);
+    setStart(shiftDays(todayISO, days));
+    setEnd(todayISO);
   };
+
+  // Could not be fetched is not the same as empty. See LoadFailed.
+  if (error) return <LoadFailed title="Analytics" what="The figures" error={error} onRetry={refresh} />;
 
   return (
     <>
@@ -109,8 +122,6 @@ export default function AnalyticsPage() {
         title="Analytics"
         description="How the platform is moving — money, bookings and new customers, over whatever period you ask for."
       />
-
-      <MockBanner />
 
       {/* ---- THE PERIOD ---- */}
       <PageCard title="Period" subtitle={backwards ? undefined : `${longDate(start)} to ${longDate(end)}`}>
