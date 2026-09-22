@@ -23,6 +23,7 @@ import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { InfoRow, InfoRows, Note } from '@/components/admin/shared';
 import {
   backendRoutes,
+  notOnTheServerYet,
   infrastructure,
   layers,
   repos,
@@ -238,8 +239,8 @@ export default function PlaybookPage() {
       <div className={styles.detailGrid}>
         <div className={styles.detailStack}>
           <PageCard
-            title="What This Panel Will Call"
-            subtitle="Every screen here runs on sample data today. These are the addresses it will use."
+            title="What This Panel Calls"
+            subtitle="Every address on the SXM Rentals server this panel uses. Nothing here is made up."
           >
             <InfoRows>
               {backendRoutes.map((route) => (
@@ -253,10 +254,24 @@ export default function PlaybookPage() {
 
             <div style={{ marginTop: 'var(--space-lg)' }}>
               <Note>
-                Every screen asks lib/api-client.ts for its data, and nothing else. That is what
-                makes connecting the real backend a change to one file rather than a hunt
-                through sixteen screens.
+                Every screen asks lib/api-client.ts for its data, and nothing else. A change on
+                the server is dealt with in that one file, not hunted for across every screen.
               </Note>
+            </div>
+
+            <div style={{ marginTop: 'var(--space-lg)' }}>
+              <Text variant="caption" tone="ink3" as="p" raw>
+                NOT ON THE SERVER YET
+              </Text>
+              <ul style={{ marginTop: 6 }}>
+                {notOnTheServerYet.map((item) => (
+                  <li key={item}>
+                    <Text variant="small" tone="ink2" as="span" raw>
+                      · {item}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
             </div>
           </PageCard>
         </div>
@@ -278,9 +293,11 @@ export default function PlaybookPage() {
 
           <PageCard title="Where The Money Rules Live">
             <Text variant="small" tone="ink2" as="p" raw>
-              Two sentences hold across every screen, and there are tests that fail the build if
-              either stops being true: gross equals payout plus commission, and a security
-              deposit is never counted as revenue.
+              Two sentences hold across every screen: gross equals payout plus commission, and a
+              security deposit is never counted as revenue. The server does the arithmetic and
+              holds itself to both. The tests below check this panel never breaks either on
+              screen — that the split visibly adds up, and that no deposit is ever added into a
+              revenue figure.
             </Text>
             <div style={{ marginTop: 'var(--space-md)' }}>
               <span className={styles.mono}>tests/rules/</span>

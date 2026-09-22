@@ -16,9 +16,9 @@
 // asked which company checks passports. Somebody doing the books wants to know
 // what Stripe takes. Somebody new wants to know what the four repositories are.
 //
-// WHY IT IS NOT IN lib/mock: none of this is made-up data. It is a description
-// of the real platform, and it stays true after the backend is connected and the
-// mock folder is deleted.
+// NONE OF THIS IS MADE-UP DATA. It is a description of the real platform: what
+// it is built from, what it costs, and which addresses on the SXM Rentals server
+// this panel calls.
 //
 // KEEP IT IN STEP WITH THE DEVELOPER GUIDE. This is a second copy of information
 // that lives there first, which is a real risk — a copy that has drifted is
@@ -287,25 +287,73 @@ export const repos: (PlaybookRepo & { layer: Layer })[] = [
   },
 ];
 
-// ---- THE BACKEND ROUTES THIS PANEL WILL CALL ----
-// Currently every one of these is answered with sample data. The list doubles as
-// the to-do for connecting the panel up: see lib/api-client.ts, where each
-// function carries the address it will eventually call.
+// ---- THE SERVER ADDRESSES THIS PANEL CALLS ----
+// Every address the panel uses, one line each, in the order the screens use
+// them. This list has drifted before — it once listed addresses that never
+// existed — so tests/rules/the-playbook-lists-what-the-panel-calls.test.ts now
+// compares it with lib/api-client.ts and lib/api/auth.ts. Add a call there
+// without adding it here, or the other way round, and that test fails.
 export const backendRoutes: { group: string; purpose: string }[] = [
-  { group: 'GET /admin/summary', purpose: 'The dashboard figures and the action queue counts' },
+  // ---- SIGNING IN ----
+  { group: 'POST /admin/auth/login', purpose: 'The password — the first of two steps, and not enough alone' },
+  { group: 'POST /admin/auth/mfa/enroll', purpose: 'Setting up the authenticator app, on a first sign-in' },
+  { group: 'POST /admin/auth/mfa/verify', purpose: 'The six-digit code — the step that actually signs somebody in' },
+  { group: 'POST /admin/auth/logout', purpose: 'Signing out' },
+  { group: 'GET /admin/me', purpose: 'Who is signed in, asked every time the panel opens' },
+
+  // ---- THE DASHBOARD AND THE LOG ----
+  { group: 'GET /admin/summary', purpose: 'The headline figures, all-time' },
   { group: 'GET /admin/queue', purpose: 'Everything waiting on somebody, oldest first' },
-  { group: 'GET /admin/users', purpose: 'The customer list and one customer in detail' },
-  { group: 'GET /admin/providers', purpose: 'The rental business list, profiles and documents' },
-  { group: 'GET /admin/vehicles', purpose: 'Every vehicle and the documents waiting to be read' },
-  { group: 'POST /admin/verification', purpose: 'Approving or rejecting a document, with a reason' },
-  { group: 'GET /admin/bookings', purpose: 'Every booking, and one booking in full' },
-  { group: 'GET /admin/payments', purpose: 'The ledger, the refund queue and the deposit ledger' },
-  { group: 'POST /admin/refunds', purpose: 'Approving or denying a refund, with a reason' },
-  { group: 'POST /admin/deposits', purpose: 'Releasing a deposit, or claiming against it' },
-  { group: 'GET /admin/disputes', purpose: 'Disputes, assignment and resolution notes' },
-  { group: 'GET /admin/promotions', purpose: 'Promotional codes and campaigns' },
-  { group: 'GET /admin/rewards', purpose: 'Tier thresholds and point values' },
-  { group: 'GET /admin/analytics', purpose: 'Revenue, bookings and sign-ups between two dates' },
-  { group: 'GET /admin/settings', purpose: 'Commission rate, KYC provider, feature flags' },
-  { group: 'GET /admin/audit', purpose: 'The audit log, filtered by staff, account and date' },
+  { group: 'GET /admin/analytics', purpose: 'Money, bookings and sign-ups between any two dates' },
+  { group: 'GET /admin/audit', purpose: 'Who changed what, when and why — written by the server' },
+  { group: 'GET /admin/staff', purpose: 'Staff names, for assigning disputes and filtering the log' },
+
+  // ---- CUSTOMERS ----
+  { group: 'GET /admin/users', purpose: 'The customer list, searchable by name and email' },
+  { group: 'GET /admin/users/:id', purpose: 'One customer in full' },
+  { group: 'PATCH /admin/users/:id', purpose: 'Changing one detail of a customer, with a reason' },
+  { group: 'PATCH /admin/users/:id/points', purpose: 'Adding or taking away points, with a reason' },
+  { group: 'DELETE /admin/users/:id', purpose: 'Closing an account, with a reason — refused while money is outstanding' },
+
+  // ---- RENTAL BUSINESSES ----
+  { group: 'GET /admin/providers', purpose: 'The rental business list' },
+  { group: 'GET /admin/providers/:id', purpose: 'One business in full' },
+  { group: 'POST /admin/providers/:id/verification', purpose: 'The SXM Verified decision, with a reason' },
+
+  // ---- VEHICLES ----
+  { group: 'GET /admin/vehicles', purpose: 'Every vehicle and whether it is listed' },
+  { group: 'GET /admin/vehicles/:id', purpose: 'One vehicle, with its paperwork' },
+  { group: 'POST /admin/vehicles/:id/listing', purpose: 'Putting a vehicle live or taking it down, with a reason' },
+  { group: 'POST /admin/vehicles/documents/:id/review', purpose: 'Approving or rejecting one document, with a reason' },
+
+  // ---- BOOKINGS ----
+  { group: 'GET /admin/bookings', purpose: 'Every booking, or one found by its reference' },
+  { group: 'GET /admin/bookings/:id', purpose: 'One booking in full, with its money split three ways' },
+
+  // ---- MONEY ----
+  { group: 'GET /admin/payments', purpose: 'The ledger: charges, refunds, payouts and commission' },
+  { group: 'GET /admin/payouts', purpose: 'Money sent on to businesses — ready, not yet on a screen' },
+  { group: 'GET /admin/refunds', purpose: 'The refund queue' },
+  { group: 'POST /admin/refunds/:id/decision', purpose: 'Approving or denying a refund, with a reason' },
+  { group: 'GET /admin/deposits', purpose: 'Every security deposit — never revenue' },
+  { group: 'POST /admin/deposits/:id/release', purpose: 'Giving a deposit back, with a reason' },
+  { group: 'POST /admin/deposits/:id/claim', purpose: 'Keeping part or all of a deposit, with the amount and a reason' },
+
+  // ---- DISPUTES ----
+  { group: 'GET /admin/disputes', purpose: 'Open and resolved disputes' },
+  { group: 'GET /admin/disputes/:id', purpose: 'One dispute in full' },
+  { group: 'POST /admin/disputes/:id/assign', purpose: 'Giving a dispute to somebody, with a reason' },
+  { group: 'POST /admin/disputes/:id/resolve', purpose: 'Closing a dispute — the notes for the record, the reason for the log' },
+];
+
+// What the server does not have yet, so the panel cannot do it either. The
+// screens for these say plainly that they are not connected.
+export const notOnTheServerYet: string[] = [
+  'Promotional codes',
+  'The rewards programme — tiers and point values',
+  'Platform settings, including the commission rate',
+  'Reading the messages on a booking',
+  'A rental business\u2019s own documents and payout account',
+  'Editing or closing a rental business',
+  'Resetting a staff password or authenticator',
 ];
