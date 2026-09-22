@@ -25,10 +25,26 @@ const nextConfig = {
   reactStrictMode: true,
 
   async rewrites() {
+    // WITHOUT THE ADDRESS THERE IS NO PANEL, SO STOP AND SAY SO. Left unset, the
+    // requests would be passed on to "undefined/api/v1/…" and the build would
+    // fail with a message about an invalid rewrite that says nothing useful. It
+    // is most likely to happen on Vercel, when the setting was added for one
+    // environment and not another.
+    const apiUrl = process.env.API_URL?.trim();
+    if (!apiUrl) {
+      throw new Error(
+        'API_URL is not set, so the panel has no server to talk to. Add it — for example ' +
+          'API_URL=https://sxm-rentals-api.onrender.com — to .env.local on your own machine, ' +
+          'or in Vercel under Settings → Environment Variables, for every environment ' +
+          '(Production and Preview).',
+      );
+    }
+
     return [
       {
         source: '/api/v1/:path*',
-        destination: `${process.env.API_URL}/api/v1/:path*`,
+        // A trailing slash typed into the setting would otherwise make "//api".
+        destination: `${apiUrl.replace(/\/+$/, '')}/api/v1/:path*`,
       },
     ];
   },

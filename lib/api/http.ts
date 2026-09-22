@@ -169,6 +169,18 @@ async function attemptOnce<T>(
     throw new NetworkError('The server did not answer properly.', response.status >= 500);
   }
 
+  // A FAILURE THAT DID NOT COME FROM SXM RENTALS AT ALL. Between the panel and
+  // the server sits Vercel, which passes each request on. When the server is
+  // asleep and slow to wake, Vercel can give up waiting and answer with an error
+  // of its own — and that answer may well be JSON with an "error" in it. Taken
+  // at face value it would be shown as if SXM Rentals had refused, in Vercel's
+  // words, and never tried again. Every answer SXM Rentals itself gives carries
+  // its own reference for the request, so an error without one is treated as
+  // what it is: the server not having answered yet.
+  if (response.status >= 500 && !fromSxmRentals(body)) {
+    throw new NetworkError('The server did not answer in time.', true);
+  }
+
   const failure = asApiError(response.status, body);
 
   // The session has ended. The panel is told once, centrally, so the person can
@@ -181,6 +193,13 @@ async function attemptOnce<T>(
 // ---- READING THE SERVER'S REFUSAL ----
 // Every refusal is the same shape. Anything that is not that shape is treated as
 // unreadable rather than guessed at.
+// Whether an error was written by the SXM Rentals server: it always says what
+// went wrong in its own envelope, with its own reference for the request.
+function fromSxmRentals(body: unknown): boolean {
+  const envelope = (body as { error?: Record<string, unknown> } | null)?.error;
+  return typeof envelope?.requestId === 'string' && typeof envelope?.code === 'string';
+}
+
 function asApiError(status: number, body: unknown): ApiError {
   const envelope = (body as { error?: Record<string, unknown> } | null)?.error;
 
