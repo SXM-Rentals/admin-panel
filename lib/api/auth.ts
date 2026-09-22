@@ -34,13 +34,36 @@ export type NextStep = 'enroll' | 'code';
 // Being told "nobody" is an ordinary answer here rather than a session that has
 // just ended, which is why it is asked for in a way that does not set off the
 // panel's "you have been signed out" handling.
+//
+// THE ANSWER HAS NO INITIALS IN IT. The server's "who am I" sends the id, the
+// name and the email and nothing else — unlike the sign-in step, which also
+// sends the two letters shown in the corner of the top bar. So after any page
+// refresh those letters would simply be missing. They are worked out here from
+// the name, the same way the server works them out when it creates an account,
+// so the corner looks the same however somebody arrived.
 export async function fetchSignedInStaff(): Promise<AdminStaff | null> {
   try {
-    return await api.get<AdminStaff>('/admin/me', { expectUnauthorized: true });
+    const me = await api.get<Omit<AdminStaff, 'avatarInitials'> & { avatarInitials?: string }>(
+      '/admin/me',
+      { expectUnauthorized: true },
+    );
+    return { ...me, avatarInitials: me.avatarInitials ?? initialsFor(me.name) };
   } catch (caught) {
     if (isUnauthorized(caught)) return null;
     throw caught;
   }
+}
+
+// "Gio Bertin-Maurice" → "GB". The first letter of the first two words; two
+// question marks if there is nothing to go on, which is what the server does too.
+export function initialsFor(name: string): string {
+  const letters = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join('');
+  return letters || '??';
 }
 
 // ---- STEP ONE: THE PASSWORD ----

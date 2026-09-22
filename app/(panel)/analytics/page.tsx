@@ -14,8 +14,8 @@
 // THE BUCKET SIZE FOLLOWS THE SPAN. Fifty days shown as two monthly bars is an
 // answer to a question nobody asked — at that resolution the shape of fifty days
 // is invisible. So a short range is counted by day, a season by week, and a year
-// by month, and the chart says underneath which one it used. See the note in
-// lib/mock/summary.ts.
+// by month, and the chart says underneath which one it used. The server does the
+// grouping; see lib/analytics.ts for how the panel knows which one it chose.
 //
 // THREE CHARTS, NOT ONE CHART WITH THREE LINES. Revenue is in dollars and runs
 // to five figures; bookings and new customers are counts that run to two. On one
@@ -26,7 +26,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { bucketFor, bucketNames } from '@/lib/mock/summary';
+import { bucketFor, bucketNames } from '@/lib/analytics';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, longDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
