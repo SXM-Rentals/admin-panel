@@ -164,16 +164,16 @@ export default function ProvidersPage() {
           rowActions={(p) => (
             <>
               <Button
-                label="Modify"
+                label="Open"
                 variant="secondary"
                 size="sm"
                 onClick={() => router.push(`/providers/${p.id}`)}
               />
               <Button
-                label="View"
+                label={p.verificationStatus === 'pending' ? 'Verify' : 'Verification'}
                 variant="outline"
                 size="sm"
-                onClick={() => router.push(`/providers/${p.id}`)}
+                onClick={() => router.push(`/providers/${p.id}/verification`)}
               />
             </>
           )}
@@ -181,7 +181,8 @@ export default function ProvidersPage() {
       </PageCard>
 
       <Text variant="small" tone="ink3" as="p" raw>
-        A business can be verified and still unable to receive money — see the payout column.
+        Being verified is only the badge. Whether customers can book a business&rsquo;s cars depends on
+        each car&rsquo;s own listing — open the business to see its fleet.
       </Text>
     </>
   );

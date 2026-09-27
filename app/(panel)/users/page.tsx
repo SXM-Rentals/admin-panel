@@ -172,21 +172,15 @@ export default function UsersPage() {
           initialSort={{ columnId: 'joined', direction: 'desc' }}
           emptyTitle="No customers match"
           emptyMessage="Try a shorter search, or clear the filters above."
+          // One button, because there is one screen. It used to be two —
+          // "Modify" and "View" — which both opened the same page.
           rowActions={(u) => (
-            <>
-              <Button
-                label="Modify"
-                variant="secondary"
-                size="sm"
-                onClick={() => router.push(`/users/${u.id}`)}
-              />
-              <Button
-                label="View"
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/users/${u.id}`)}
-              />
-            </>
+            <Button
+              label="Open"
+              variant="secondary"
+              size="sm"
+              onClick={() => router.push(`/users/${u.id}`)}
+            />
           )}
         />
       </PageCard>
