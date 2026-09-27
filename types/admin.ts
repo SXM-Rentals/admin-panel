@@ -45,11 +45,14 @@ export type StaffAccount = AdminStaff & {
   // True for an account created or reset from this panel, until its owner sets
   // a password of their own. The temporary one is somebody else's knowledge.
   mustChangePassword: boolean;
-  lastSignInAt: string | null;
+  // Left out or empty until they have signed in once. The server leaves most
+  // optional fields out of its answer rather than sending them as nothing, so
+  // both are accepted here and neither is relied on.
+  lastSignInAt?: string | null;
   createdAt: string;
   // Set when their access has been taken away. The account is kept so the
   // audit log still has somebody to point at.
-  disabledAt: string | null;
+  disabledAt?: string | null;
 };
 
 // ---- THE AUDIT LOG ----

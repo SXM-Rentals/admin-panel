@@ -55,7 +55,6 @@ type Handover = {
   email: string;
   password: string;
   newAuthenticator: boolean;
-  isNew: boolean;
 };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -205,19 +204,6 @@ export default function StaffPage() {
                 ? ' They will set up an authenticator app as part of signing in.'
                 : ''}
             </Note>
-            {/* WORDED FOR EITHER SETTING, because the panel cannot tell which
-                is in force. Vercel can be set to keep its own login in front of
-                this address, or to leave it to the panel's sign-in alone. If the
-                wall is up, a new person needs their own way past it; if it has
-                been taken down, the line below simply does not apply. The way to
-                tell is to open the panel in a private window. */}
-            {handover.isNew ? (
-              <Note icon="warning-outline" tone="ink2">
-                If Vercel&rsquo;s own login still stands in front of the panel, they need their own way
-                past it too: they sign in with their own Vercel account, press Request access, and you
-                approve it under Settings → Deployment Protection → Requests.
-              </Note>
-            ) : null}
           </div>
         </PageCard>
       ) : null}
@@ -388,7 +374,6 @@ export default function StaffPage() {
                 email: created.email,
                 password,
                 newAuthenticator: true,
-                isNew: true,
               });
               setName('');
               setEmail('');
@@ -406,7 +391,6 @@ export default function StaffPage() {
                 email: action.account.email,
                 password: resetPassword,
                 newAuthenticator,
-                isNew: false,
               });
               setResetting(null);
             } else if (action.kind === 'disable') {
