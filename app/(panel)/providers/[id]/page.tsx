@@ -17,8 +17,15 @@
 // on that car's own listing, and nothing else. So the fleet below links straight
 // to each vehicle's listing decision, because that is where a car is actually
 // taken down.
+//
+// WHICH IS ALSO WHY "STOP THIS BUSINESS TRADING" IS BUILT OUT OF THOSE SAME
+// DECISIONS. There is no close-the-account address on the server, and a button
+// that only looked like one would be worse than no button at all. Taking every
+// one of a business's live vehicles down is the real thing the panel can do —
+// nobody can book them from that moment on — so the screen does exactly that,
+// as one decision with one reason, and says plainly that the account stays open.
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
@@ -26,6 +33,8 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, longDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
+import { PartialChange, presentError } from '@/lib/api/errors';
+import { ReasonDialog } from '@/components/admin/ReasonDialog';
 import { InfoRow, InfoRows, LISTING_STYLE, Note, VerificationPill, YesNo } from '@/components/admin/shared';
 import { Button, Icon, Skeleton, StatusPill, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
@@ -35,7 +44,10 @@ export default function ProviderDetailPage() {
   const id = params?.id ?? '';
 
   const { data: provider, loading, error, refresh } = useAsyncData(() => apiClient.getProvider(id), [id]);
-  const { data: vehicles } = useAsyncData(() => apiClient.listVehicles(), []);
+  const { data: vehicles, refresh: refreshVehicles } = useAsyncData(() => apiClient.listVehicles(), []);
+
+  // Whether the "stop trading" dialog is open.
+  const [stopping, setStopping] = useState(false);
 
   // Could not be fetched is not the same as "no such business". See LoadFailed.
   if (error) return <LoadFailed title="Business" what="This business" error={error} onRetry={refresh} />;
@@ -52,6 +64,18 @@ export default function ProviderDetailPage() {
   }
 
   const theirVehicles = (vehicles ?? []).filter((v) => v.providerId === provider.id);
+
+  // The cars a customer can book right now — the only ones there is anything to
+  // do about. A car already down, or still waiting on its paperwork, cannot be
+  // booked, and sending a decision for it would put a pointless line in the
+  // audit log.
+  const bookable = theirVehicles.filter((v) => v.listingStatus === 'live');
+
+  // AND WHETHER THE PANEL IS LOOKING AT THE WHOLE FLEET. The vehicles list is
+  // the most recent few hundred, not everything, so a large business may have
+  // cars that are not in it. "Stopped trading" that quietly missed three of them
+  // is the worst outcome of the lot, so the button is not offered in that case.
+  const wholeFleetVisible = theirVehicles.length >= provider.vehicleCount;
 
   return (
     <>
@@ -191,12 +215,47 @@ export default function ProviderDetailPage() {
             </div>
           </PageCard>
 
-          <PageCard title="Close Business Account" subtitle="Not connected yet">
-            <Note>
-              Closing a business is not something the SXM Rentals server offers yet. To stop a
-              business trading in the meantime, take each of its vehicles down from its own vehicle
-              screen.
-            </Note>
+          <PageCard
+            title="Stop This Business Trading"
+            subtitle={
+              bookable.length === 0
+                ? 'Nothing of theirs is bookable'
+                : `${bookable.length} ${bookable.length === 1 ? 'vehicle' : 'vehicles'} bookable now`
+            }
+          >
+            {bookable.length === 0 ? (
+              <Note>
+                No vehicle of theirs is live, so there is nothing for a customer to book — and
+                nothing here to take down.
+              </Note>
+            ) : !wholeFleetVisible ? (
+              <Note icon="warning-outline" tone="ink2">
+                This business has {provider.vehicleCount} vehicles and the panel can only see{' '}
+                {theirVehicles.length} of them, so it cannot promise to take them all down. Do it
+                from the Vehicles screen, where the rest can be searched for.
+              </Note>
+            ) : (
+              <>
+                <Note icon="warning-outline" tone="ink2">
+                  This takes{' '}
+                  {bookable.length === 1
+                    ? 'their one live vehicle'
+                    : `all ${bookable.length} of their live vehicles`}{' '}
+                  down, so customers can no longer find or book any of them. Bookings already made
+                  are not cancelled, and the business keeps its account and can still sign in — the
+                  server offers no way to close an account, and this is not one.
+                </Note>
+
+                <div style={{ marginTop: 'var(--space-lg)' }}>
+                  <Button
+                    label="Stop Them Trading"
+                    variant="danger"
+                    size="md"
+                    onClick={() => setStopping(true)}
+                  />
+                </div>
+              </>
+            )}
           </PageCard>
         </div>
 
@@ -268,6 +327,55 @@ export default function ProviderDetailPage() {
           </PageCard>
         </div>
       </div>
+
+      <ReasonDialog
+        open={stopping}
+        onClose={() => setStopping(false)}
+        title="Stop this business trading"
+        description={`Every one of their ${bookable.length} live ${bookable.length === 1 ? 'vehicle comes' : 'vehicles come'} off the site straight away, and the reason you give is recorded against each of them. Bookings already made are not cancelled, and the account itself stays open.`}
+        confirmLabel="Take their vehicles down"
+        destructive
+        reasonPlaceholder="e.g. Trading licence expired — down until the renewal is on file."
+        change={{
+          subjectLabel: provider.businessName,
+          field: 'Vehicles customers can book',
+          before: `${bookable.length} live`,
+          after: 'None',
+        }}
+        onConfirm={async (reason) => {
+          // ONE AT A TIME, NOT ALL AT ONCE. These are changes, so nothing is
+          // retried automatically, and firing a dozen at a server that may be
+          // waking up is how some of them get lost.
+          const notDone: string[] = [];
+          let firstFault: unknown;
+          let done = 0;
+
+          for (const vehicle of bookable) {
+            try {
+              await apiClient.decideVehicleListing(vehicle.id, false, reason);
+              done += 1;
+            } catch (caught) {
+              if (firstFault === undefined) firstFault = caught;
+              notDone.push(`${vehicle.make} ${vehicle.model} (${vehicle.reference})`);
+            }
+          }
+
+          // So the fleet above, and the count on this card, tell the truth
+          // whatever happened. It also means pressing the button again after a
+          // partial failure only tries the ones still live.
+          await refreshVehicles();
+
+          if (notDone.length === 0) return;
+
+          // Nothing went through at all: that is an ordinary failure, and the
+          // dialog can say "nothing was changed" in the server's own words.
+          if (done === 0) throw firstFault;
+
+          throw new PartialChange(
+            `${done} of ${bookable.length} vehicles were taken down. ${notDone.join(', ')} ${notDone.length === 1 ? 'was' : 'were'} not. ${presentError(firstFault)} The fleet above has been reloaded, so it shows where this stands.`,
+          );
+        }}
+      />
     </>
   );
 }

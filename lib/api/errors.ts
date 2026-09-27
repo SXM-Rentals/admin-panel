@@ -73,6 +73,22 @@ export class NetworkError extends Error {
   }
 }
 
+// ---- WHEN SOME OF A SET OF CHANGES WENT THROUGH AND SOME DID NOT ----
+// A few actions in the panel are one decision that takes several changes to
+// carry out: stopping a business trading means taking every one of its vehicles
+// down, one at a time. If the third of five fails, neither "done" nor "nothing
+// was changed" is true, and both are dangerous — the first hides work still to
+// do, the second invites somebody to run it all again.
+//
+// So that case carries its own sentence, written where it happened, saying what
+// did go through and what did not.
+export class PartialChange extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PartialChange';
+  }
+}
+
 // ---- WHAT THE PERSON IS SHOWN ----
 // The single place that turns any thrown thing into a sentence. Every screen
 // reaches this through useAsyncData, so there is one answer to "what do we say"
@@ -89,6 +105,9 @@ export function presentError(caught: unknown): string {
   // The server already wrote this for the person reading it. Passed through
   // untouched, on purpose — see the note at the top of this file.
   if (caught instanceof ApiError) return caught.message;
+
+  // Already written for the person, at the point where it went wrong.
+  if (caught instanceof PartialChange) return caught.message;
 
   if (caught instanceof NetworkError) {
     return caught.waking

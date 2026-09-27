@@ -38,7 +38,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button, Icon, Input, Sheet, Text, TextArea, useToast } from '@/components/ui';
-import { ApiError, presentError } from '@/lib/api/errors';
+import { ApiError, PartialChange, presentError } from '@/lib/api/errors';
 import { money } from '@/lib/format';
 import styles from './admin.module.css';
 
@@ -215,7 +215,11 @@ export function ReasonDialog({
       setProblem(
         caught instanceof ApiError
           ? `${presentError(caught)} Nothing was changed.`
-          : 'We could not confirm whether this went through — the connection dropped before SXM Rentals answered. Refresh the page and check before trying again.',
+          : // Part of it went through. The message says which part, and adding
+            // "nothing was changed" to it would be false.
+            caught instanceof PartialChange
+            ? presentError(caught)
+            : 'We could not confirm whether this went through — the connection dropped before SXM Rentals answered. Refresh the page and check before trying again.',
       );
       return;
     }
