@@ -1,0 +1,122 @@
+/* SXM Rentals — Created by Giordano Bertin-Maurice
+   Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
+   WHAT THIS FILE DOES: The look of the "Modify" button and the short list of
+   actions it opens. Every colour comes from the rulebook in app/globals.css, so
+   this file knows nothing about dark mode — it just follows it. */
+
+/* ---- THE BUTTON ----
+   Shaped like the outline buttons it sits beside in a table row, so a row does
+   not look like two different sets of controls. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: var(--size-button-sm);
+  padding-inline: var(--space-lg);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--hairline);
+  color: var(--ink2);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.triggerMd {
+  min-height: 48px;
+  font-size: 16px;
+  padding-inline: var(--space-xl);
+}
+
+.trigger:hover:not(:disabled) {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+/* While the list is open the button stays looking pressed, so it is obvious
+   which row the list belongs to. */
+.triggerOpen {
+  background: var(--tile);
+  color: var(--ink);
+  border-color: var(--ink3);
+}
+
+.trigger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- THE LIST ----
+   Fixed to the window rather than to the row: the tables scroll, and a browser
+   clips anything inside a box that scrolls. See the note in ActionMenu.tsx. */
+.list {
+  position: fixed;
+  z-index: 40;
+  min-width: 248px;
+  max-width: 320px;
+  padding: var(--space-sm);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-floating);
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  color: var(--ink2);
+  font-size: 13.5px;
+  text-align: left;
+  min-height: 36px;
+}
+
+.item > :global(svg) {
+  /* Holds the icon on the first line when the reason underneath wraps. */
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.itemText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemLabel {
+  font-weight: 600;
+}
+
+/* The reason an action cannot be chosen. Small and quiet, but there — a greyed
+   item with no explanation reads as "you are not allowed". */
+.itemWhy {
+  color: var(--ink3);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.item:hover:not([aria-disabled='true']) {
+  background: var(--tile);
+  color: var(--ink);
+}
+
+.itemDanger {
+  color: var(--danger);
+}
+
+.itemDanger:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.itemOff {
+  color: var(--ink3);
+  cursor: not-allowed;
+}

@@ -23,7 +23,7 @@ import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { VerificationPill } from '@/components/admin/shared';
-import { Button, Text } from '@/components/ui';
+import { ActionMenu, Button, Text } from '@/components/ui';
 import type { AdminProvider, VerificationStatus } from '@/types';
 
 type StatusFilter = 'all' | VerificationStatus;
@@ -161,6 +161,12 @@ export default function ProvidersPage() {
           initialSort={{ columnId: 'volume', direction: 'desc' }}
           emptyTitle="No businesses match"
           emptyMessage="Try a shorter search, or clear the filters above."
+          // OPEN, AND EVERYTHING ELSE UNDER ONE MENU. A row has space for two
+          // controls and a business has four things you might do to it, which is
+          // how this panel ended up with "Modify" and "View" side by side both
+          // opening the same screen. The two that the server cannot do yet are
+          // in the menu too, greyed, with the reason — left out, somebody hunts
+          // for them through five screens.
           rowActions={(p) => (
             <>
               <Button
@@ -169,11 +175,36 @@ export default function ProvidersPage() {
                 size="sm"
                 onClick={() => router.push(`/providers/${p.id}`)}
               />
-              <Button
-                label={p.verificationStatus === 'pending' ? 'Verify' : 'Verification'}
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/providers/${p.id}/verification`)}
+              <ActionMenu
+                label="Modify"
+                items={[
+                  {
+                    label: 'Edit their details',
+                    icon: 'create-outline',
+                    unavailable: 'The server does not offer this yet.',
+                  },
+                  {
+                    label: p.verificationStatus === 'pending' ? 'Decide verification' : 'Verification decision',
+                    icon: 'shield-checkmark-outline',
+                    onSelect: () => router.push(`/providers/${p.id}/verification`),
+                  },
+                  {
+                    // Opens the business itself with the dialog up, rather than
+                    // firing from here: it takes every one of their live cars
+                    // down, and nobody should set that off from a row where they
+                    // cannot see which cars those are.
+                    label: 'Stop them trading',
+                    icon: 'pause-outline',
+                    destructive: true,
+                    onSelect: () => router.push(`/providers/${p.id}?stop=1`),
+                  },
+                  {
+                    label: 'Close the business',
+                    icon: 'trash-outline',
+                    destructive: true,
+                    unavailable: 'The server does not offer this yet.',
+                  },
+                ]}
               />
             </>
           )}

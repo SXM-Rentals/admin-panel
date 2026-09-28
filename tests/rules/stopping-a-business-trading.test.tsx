@@ -17,21 +17,29 @@
 // that somebody will later have to explain.
 
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor, within } from '../render';
 import { reply, sentTo, serve } from '../fake-server';
 import ProviderDetailPage from '@/app/(panel)/providers/[id]/page';
 import type { AdminProvider, AdminVehicle } from '@/types/admin';
 
-// The screen reads the business's reference out of the address bar. There is no
-// address bar here, so it is given one.
+// The screen reads the business's reference out of the address bar, and looks
+// there for an action chosen on the list before it. There is no address bar here,
+// so it is given one that a test can write to.
+let query = '';
+const replaced = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn() }),
+  useRouter: () => ({ replace: replaced, push: vi.fn(), back: vi.fn() }),
   usePathname: () => '/providers/pr-1',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(query),
   useParams: () => ({ id: 'pr-1' }),
 }));
+
+beforeEach(() => {
+  query = '';
+  replaced.mockClear();
+});
 
 const ME = { id: 'st-me', name: 'Gio Bertin-Maurice', email: 'gio@sxmrentals.app', avatarInitials: 'GB' };
 
@@ -150,5 +158,68 @@ describe('stopping a business trading', () => {
 
     expect(await screen.findByText(/cannot promise to take them all down/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /stop them trading/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('the Modify menu on a business', () => {
+  it('offers the same actions here as on the row, and says which the server cannot do', async () => {
+    const user = userEvent.setup();
+    serve({ '/admin/me': ME, '/admin/providers/pr-1': BUSINESS, 'GET /admin/vehicles': FLEET });
+    render(<ProviderDetailPage />);
+
+    await user.click(await screen.findByRole('button', { name: /^modify$/i }));
+
+    // The one that can be done here.
+    expect(screen.getByRole('menuitem', { name: /stop them trading/i })).not.toHaveAttribute('aria-disabled');
+    // And the two the server has no address for, each saying so.
+    for (const name of [/edit their details/i, /close the business/i]) {
+      const item = screen.getByRole('menuitem', { name });
+      expect(item).toHaveAttribute('aria-disabled', 'true');
+      expect(item).toHaveTextContent(/does not offer this yet/i);
+    }
+  });
+
+  it('will not offer to stop a business with nothing live, and says why', async () => {
+    const user = userEvent.setup();
+    serve({
+      '/admin/me': ME,
+      '/admin/providers/pr-1': { ...BUSINESS, vehicleCount: 1 },
+      'GET /admin/vehicles': [vehicle('v2', 'suspended', 'Corolla')],
+    });
+    render(<ProviderDetailPage />);
+
+    await user.click(await screen.findByRole('button', { name: /^modify$/i }));
+
+    const stop = screen.getByRole('menuitem', { name: /stop them trading/i });
+    expect(stop).toHaveAttribute('aria-disabled', 'true');
+    expect(stop).toHaveTextContent(/none of their vehicles are live/i);
+  });
+});
+
+describe('arriving from the businesses list with an action already chosen', () => {
+  it('opens the dialog, and takes the instruction out of the address bar', async () => {
+    query = 'stop=1';
+    serve({ '/admin/me': ME, '/admin/providers/pr-1': BUSINESS, 'GET /admin/vehicles': FLEET });
+    render(<ProviderDetailPage />);
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/stop this business trading/i);
+    // So a refresh, or pressing Back, does not raise it again.
+    await waitFor(() => expect(replaced).toHaveBeenCalledWith('/providers/pr-1'));
+  });
+
+  it('does not open it when every one of their cars is already down', async () => {
+    query = 'stop=1';
+    serve({
+      '/admin/me': ME,
+      '/admin/providers/pr-1': { ...BUSINESS, vehicleCount: 1 },
+      'GET /admin/vehicles': [vehicle('v2', 'suspended', 'Corolla')],
+    });
+    render(<ProviderDetailPage />);
+
+    // The screen says there is nothing to take down, and no dialog is raised
+    // over it asking for a reason to take nothing down.
+    expect(await screen.findByText(/nothing here to take down/i)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(replaced).toHaveBeenCalledWith('/providers/pr-1'));
   });
 });

@@ -15,6 +15,7 @@
 export { Text, type TextProps } from './Text';
 export { Icon, type IconName, type IconProps } from './Icon';
 export { Button, type ButtonProps } from './Button';
+export { ActionMenu, type ActionMenuItem, type ActionMenuProps } from './ActionMenu';
 export { IconButton, type IconButtonProps } from './IconButton';
 export { Logo, type LogoProps } from './Logo';
 export { Card, SectionHeader, Divider, type CardProps } from './Card';

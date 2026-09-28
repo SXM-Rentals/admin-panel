@@ -25,9 +25,9 @@
 // nobody can book them from that moment on — so the screen does exactly that,
 // as one decision with one reason, and says plainly that the account stays open.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, longDate } from '@/lib/format';
@@ -36,18 +36,57 @@ import { LoadFailed } from '@/components/layout/LoadFailed';
 import { PartialChange, presentError } from '@/lib/api/errors';
 import { ReasonDialog } from '@/components/admin/ReasonDialog';
 import { InfoRow, InfoRows, LISTING_STYLE, Note, VerificationPill, YesNo } from '@/components/admin/shared';
-import { Button, Icon, Skeleton, StatusPill, Text } from '@/components/ui';
+import { ActionMenu, Button, Icon, Skeleton, StatusPill, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
 
 export default function ProviderDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const { data: provider, loading, error, refresh } = useAsyncData(() => apiClient.getProvider(id), [id]);
-  const { data: vehicles, refresh: refreshVehicles } = useAsyncData(() => apiClient.listVehicles(), []);
+  const {
+    data: vehicles,
+    loading: fleetLoading,
+    refresh: refreshVehicles,
+  } = useAsyncData(() => apiClient.listVehicles(), []);
 
   // Whether the "stop trading" dialog is open.
   const [stopping, setStopping] = useState(false);
+
+  // ---- WHAT CAN BE DONE ABOUT THIS BUSINESS ----
+  // Worked out here, above the "still loading" and "could not load" branches,
+  // because the effect below needs it: somebody arriving from the businesses
+  // list has already chosen an action there, and whether it applies is only
+  // knowable once the fleet is in.
+  const theirVehicles = provider ? (vehicles ?? []).filter((v) => v.providerId === provider.id) : [];
+
+  // The cars a customer can book right now — the only ones there is anything to
+  // do about. A car already down, or still waiting on its paperwork, cannot be
+  // booked, and sending a decision for it would put a pointless line in the
+  // audit log.
+  const bookable = theirVehicles.filter((v) => v.listingStatus === 'live');
+
+  // AND WHETHER THE PANEL IS LOOKING AT THE WHOLE FLEET. The vehicles list is
+  // the most recent few hundred, not everything, so a large business may have
+  // cars that are not in it. "Stopped trading" that quietly missed three of them
+  // is the worst outcome of the lot, so it is not offered in that case.
+  const wholeFleetVisible = provider ? theirVehicles.length >= provider.vehicleCount : false;
+  const canStopTrading = bookable.length > 0 && wholeFleetVisible;
+
+  // ---- ARRIVING WITH THE ACTION ALREADY CHOSEN ----
+  // "Stop them trading" on a row in the businesses list sends you here with
+  // ?stop=1, because the decision needs the fleet in front of you. If it turns
+  // out not to apply — every car is already down — the dialog does not open, and
+  // the card below says why. Either way the instruction comes out of the address
+  // bar, so a refresh or a press of Back does not raise it again.
+  const askedToStop = searchParams?.get('stop') === '1';
+  useEffect(() => {
+    if (!askedToStop || !provider || fleetLoading) return;
+    if (canStopTrading) setStopping(true);
+    router.replace(`/providers/${provider.id}`);
+  }, [askedToStop, provider, fleetLoading, canStopTrading, router]);
 
   // Could not be fetched is not the same as "no such business". See LoadFailed.
   if (error) return <LoadFailed title="Business" what="This business" error={error} onRetry={refresh} />;
@@ -63,20 +102,6 @@ export default function ProviderDetailPage() {
     );
   }
 
-  const theirVehicles = (vehicles ?? []).filter((v) => v.providerId === provider.id);
-
-  // The cars a customer can book right now — the only ones there is anything to
-  // do about. A car already down, or still waiting on its paperwork, cannot be
-  // booked, and sending a decision for it would put a pointless line in the
-  // audit log.
-  const bookable = theirVehicles.filter((v) => v.listingStatus === 'live');
-
-  // AND WHETHER THE PANEL IS LOOKING AT THE WHOLE FLEET. The vehicles list is
-  // the most recent few hundred, not everything, so a large business may have
-  // cars that are not in it. "Stopped trading" that quietly missed three of them
-  // is the worst outcome of the lot, so the button is not offered in that case.
-  const wholeFleetVisible = theirVehicles.length >= provider.vehicleCount;
-
   return (
     <>
       <PageHead
@@ -84,11 +109,48 @@ export default function ProviderDetailPage() {
         description={`${provider.town} · ${provider.side === 'dutch' ? 'Dutch side' : 'French side'} · with SXM Rentals since ${longDate(provider.memberSince)}`}
         actions={
           <>
-            <Button
-              label="Verification Decision"
-              href={`/providers/${provider.id}/verification`}
-              variant="secondary"
+            {/* THE SAME FOUR ITEMS AS THE ROW THIS SCREEN WAS OPENED FROM, in the
+                same order and with the same words. Somebody who chose Modify in
+                the list and then opened the business instead should not have to
+                work out where the actions went — and here the menu can say more,
+                because the fleet is loaded: "stop them trading" knows whether
+                there is anything to stop. */}
+            <ActionMenu
+              label="Modify"
               size="md"
+              items={[
+                {
+                  label: 'Edit their details',
+                  icon: 'create-outline',
+                  unavailable: 'The server does not offer this yet.',
+                },
+                {
+                  label:
+                    provider.verificationStatus === 'pending' ? 'Decide verification' : 'Verification decision',
+                  icon: 'shield-checkmark-outline',
+                  onSelect: () => router.push(`/providers/${provider.id}/verification`),
+                },
+                {
+                  label: 'Stop them trading',
+                  icon: 'pause-outline',
+                  destructive: true,
+                  ...(canStopTrading
+                    ? { onSelect: () => setStopping(true) }
+                    : {
+                        unavailable: fleetLoading
+                          ? 'Still loading their fleet.'
+                          : bookable.length === 0
+                            ? 'None of their vehicles are live.'
+                            : 'The panel cannot see their whole fleet — use the Vehicles screen.',
+                      }),
+                },
+                {
+                  label: 'Close the business',
+                  icon: 'trash-outline',
+                  destructive: true,
+                  unavailable: 'The server does not offer this yet.',
+                },
+              ]}
             />
             <Button label="Back to Providers" href="/providers" variant="ghost" size="md" />
           </>
