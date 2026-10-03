@@ -26,21 +26,31 @@ import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { Icon, Skeleton, StatusPill, Text } from '@/components/ui';
+import type { IconName } from '@/components/ui';
 import type { QueueItem } from '@/types';
 import styles from '@/components/admin/admin.module.css';
 
-type KindFilter = 'all' | 'verification' | 'dispute' | 'refund';
+type KindFilter = 'all' | 'verification' | 'dispute' | 'refund' | 'fleet_request';
 
-// How each of the three kinds is drawn — its icon and its colour. Kept in one
-// place so a queue row and the screen it links to agree with each other.
-const KIND: Record<
-  QueueItem['kind'],
-  { icon: 'shield-checkmark-outline' | 'alert-circle-outline' | 'swap-horizontal'; color: string; label: string }
-> = {
+// How each kind is drawn — its icon and its colour. Kept in one place so a queue
+// row and the screen it links to agree with each other.
+//
+// THE SERVER DECIDES WHAT GOES IN THIS QUEUE, AND IT HAS GOT AHEAD OF THIS LIST
+// BEFORE. When fleet requests were added, a row arrived with a kind this file had
+// never heard of, `KIND[item.kind]` came back undefined, and reading .icon off it
+// threw — so one new kind of work on the server took the whole queue screen down.
+// Hence UNKNOWN below: a kind nobody here has heard of draws as a plain piece of
+// work with its own words, and the screen keeps going.
+type KindStyle = { icon: IconName; color: string; label: string };
+
+const KIND: Record<QueueItem['kind'], KindStyle> = {
   verification: { icon: 'shield-checkmark-outline', color: 'var(--brand)', label: 'Verification' },
   dispute: { icon: 'alert-circle-outline', color: 'var(--danger)', label: 'Dispute' },
   refund: { icon: 'swap-horizontal', color: 'var(--warning)', label: 'Refund' },
+  fleet_request: { icon: 'documents-outline', color: 'var(--success)', label: 'Fleet set-up' },
 };
+
+const UNKNOWN: KindStyle = { icon: 'flash-outline', color: 'var(--ink3)', label: 'Something else' };
 
 // How long something has been waiting, said as a state rather than a number of
 // days. "Overdue" is a judgement the screen should make, not one every reader
@@ -89,6 +99,7 @@ export default function ActionQueuePage() {
               { value: 'verification', label: 'Verifications', count: count('verification') },
               { value: 'dispute', label: 'Disputes', count: count('dispute') },
               { value: 'refund', label: 'Refunds', count: count('refund') },
+              { value: 'fleet_request', label: 'Fleet set-up', count: count('fleet_request') },
             ]}
           />
         </FilterBar>
@@ -110,7 +121,7 @@ export default function ActionQueuePage() {
         ) : (
           <div className={styles.queueList}>
             {visible.map((item) => {
-              const kindStyle = KIND[item.kind];
+              const kindStyle = KIND[item.kind] ?? UNKNOWN;
               const urgency = URGENCY[item.urgency];
 
               return (

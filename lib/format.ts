@@ -126,6 +126,19 @@ export const sideLabels: Record<string, string> = {
   french: 'French side',
 };
 
+// ---- HOW BIG A FILE IS ----
+// For a spreadsheet or a photo a business sent us. Rounded hard on purpose:
+// whoever is about to download it wants to know "small" or "big", not 1,482,391
+// bytes. Kilobytes and megabytes of 1,024, as every operating system shows them.
+export function fileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return 'Unknown size';
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  const mb = kb / 1024;
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+}
+
 // Makes a first letter capital, for anything not covered above.
 export function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);

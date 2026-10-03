@@ -38,6 +38,7 @@ import { ApiError } from '@/lib/api/errors';
 import type {
   AdminBooking,
   AdminTier,
+  FleetRequest,
   AdminPayout,
   AdminProvider,
   AdminStaff,
@@ -58,6 +59,18 @@ import type {
 
 // The most the server sends in one go.
 const LIST_LIMIT = 200;
+
+// ---- WHERE ONE OF A BUSINESS'S OWN FILES COMES FROM ----
+// A link rather than a fetch, on purpose: the browser downloads it, with the
+// session cookie it already has, and nothing lands in the panel's memory. The
+// server sends it as an attachment and never inline, so a spreadsheet somebody
+// sent us can never be opened as a page inside the panel.
+//
+// It is here, beside the calls, because this file is the one place that knows the
+// shape of the server's addresses.
+export function fleetFileHref(requestId: string, fileId: string): string {
+  return `/api/v1/admin/fleet-requests/${encodeURIComponent(requestId)}/files/${encodeURIComponent(fileId)}`;
+}
 
 // ---- "NOT FOUND" AS AN ANSWER, NOT A FAULT ----
 // Turns the server's "there is no such record" into `undefined`, and lets
@@ -332,6 +345,27 @@ export const apiClient = {
     return api.post<DisputeCase>(`/admin/disputes/${encodeURIComponent(id)}/resolve`, {
       body: { notes, reason },
     });
+  },
+
+  // ---- BUSINESSES ASKING US TO SET THEIR FLEET UP ----
+  // Waiting ones first, oldest first — the order they should be answered in,
+  // which the server already sorts them into.
+  async listFleetRequests(status?: 'waiting' | 'done'): Promise<FleetRequest[]> {
+    return api.get<FleetRequest[]>('/admin/fleet-requests', {
+      query: status ? { status } : undefined,
+    });
+  },
+
+  async getFleetRequest(id: string): Promise<FleetRequest | undefined> {
+    return orNotFound(api.get<FleetRequest>(`/admin/fleet-requests/${encodeURIComponent(id)}`));
+  },
+
+  // NO REASON ON THIS ONE, AND THAT IS NOT AN OVERSIGHT. The audit log records
+  // changes to records — money, access, somebody's account. This is a job being
+  // ticked off a list of work: the server keeps who did it and when, and there is
+  // no "before" for a reason to explain.
+  async markFleetRequestDone(id: string): Promise<FleetRequest> {
+    return api.post<FleetRequest>(`/admin/fleet-requests/${encodeURIComponent(id)}/done`);
   },
 
   // ---- ANALYTICS ----

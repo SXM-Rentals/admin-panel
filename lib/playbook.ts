@@ -338,6 +338,11 @@ export const backendRoutes: { group: string; purpose: string }[] = [
   },
   { group: 'POST /admin/providers/:id/verification', purpose: 'The SXM Verified decision, with a reason' },
 
+  // ---- A BUSINESS ASKING US TO SET ITS FLEET UP ----
+  { group: 'GET /admin/fleet-requests', purpose: 'Businesses that sent us their records to put on for them' },
+  { group: 'GET /admin/fleet-requests/:id', purpose: 'One request, with the files they sent listed' },
+  { group: 'POST /admin/fleet-requests/:id/done', purpose: 'Ticking one off once their cars are on' },
+
   // ---- VEHICLES ----
   { group: 'GET /admin/vehicles', purpose: 'Every vehicle and whether it is listed' },
   { group: 'GET /admin/vehicles/:id', purpose: 'One vehicle, with its paperwork' },

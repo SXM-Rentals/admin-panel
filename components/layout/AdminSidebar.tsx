@@ -59,6 +59,9 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: '/bookings', label: 'Bookings', icon: 'calendar-outline' },
       { href: '/disputes', label: 'Disputes', icon: 'alert-circle-outline' },
+      // Work a business asked us to do for it, rather than a record to change.
+      // Sits in Operations because that is what it is: a job queue.
+      { href: '/fleet-requests', label: 'Fleet Set-up', icon: 'documents-outline' },
       { href: '/promotions', label: 'Promotions', icon: 'ticket-outline' },
     ],
   },

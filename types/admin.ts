@@ -424,13 +424,51 @@ export type SeriesPoint = {
 // three screens in turn and forgetting the third.
 export type QueueItem = {
   id: string;
-  kind: 'verification' | 'dispute' | 'refund';
+  // FOUR KINDS, AND THE SCREEN MUST COPE WITH A FIFTH. The server decides what
+  // goes in the queue, and it has added a kind before now — a fleet request —
+  // which the queue screen then drew with an undefined icon. A list of kinds in
+  // the panel is a list the server can get ahead of, so the screen falls back
+  // rather than trusting this to be complete.
+  kind: 'verification' | 'dispute' | 'refund' | 'fleet_request';
   title: string;
   detail: string;
   waitingSince: string;
   href: string;
   // How long it has been sitting there. Sorts the oldest to the top.
   urgency: 'normal' | 'aging' | 'overdue';
+};
+
+// ---- A BUSINESS ASKING US TO SET ITS FLEET UP ----
+// Not every rental business on this island keeps its cars in a spreadsheet, let
+// alone in software. One can send us whatever it has — a spreadsheet, a photo of
+// a ledger, a list in an email — and ask us to put its fleet on SXM Rentals for
+// it. This is that request, as the person doing the work sees it.
+export type FleetRequest = {
+  id: string;
+  providerId: string;
+  businessName: string;
+  // How many vehicles they say they have, which is what the work is sized on.
+  fleetSize: number;
+  // What they sent, in their words: a spreadsheet, photos, a booking system.
+  recordFormat: string;
+  // THEIR OWN CONTACT DETAIL FOR THIS JOB, given for staff to use. Treat it the
+  // way the owner's personal number on a business is treated.
+  contact: string;
+  notes: string;
+  status: 'waiting' | 'done';
+  createdAt: string;
+  handledAt: string | null;
+  // Listed by name here. The files themselves are handed over one at a time, as
+  // downloads, and never shown inside the panel — see FLEET_FILE_HREF.
+  files: FleetRequestFile[];
+};
+
+export type FleetRequestFile = {
+  id: string;
+  fileName: string;
+  contentType: string;
+  // In bytes, as the server counted them.
+  size: number;
 };
 
 // ---- THE PLAYBOOK ----
