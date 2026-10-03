@@ -19,7 +19,7 @@
 // it, invisibly, and the panel simply asks who it belongs to.
 
 import { api } from './http';
-import type { AdminStaff } from '@/types';
+import type { AdminStaff, AdminTier } from '@/types';
 
 // What the server says to do next once a password has been accepted. Somebody
 // signing in for the first time has no authenticator app set up yet, so they are
@@ -42,6 +42,10 @@ export type NextStep = 'enroll' | 'code';
 // the name, the same way the server works them out when it creates an account,
 // so the corner looks the same however somebody arrived.
 //
+// IT ALSO SAYS WHAT THIS ACCOUNT MAY DO — its tier — so the panel can grey out
+// what this person cannot use and say why. The server checks it again on every
+// request; see lib/tiers.ts.
+//
 // IT ALSO SAYS WHETHER THEY MUST SET THEIR OWN PASSWORD FIRST. An account made
 // or reset from the Staff screen starts with a temporary password somebody
 // else chose, and nothing else can be done until its owner replaces it. A
@@ -57,6 +61,7 @@ export async function fetchSignedInStaff(): Promise<SignedIn | null> {
       email: string;
       avatarInitials?: string;
       mustChangePassword?: boolean;
+      tier?: AdminTier;
     }>('/admin/me', { expectUnauthorized: true });
     return {
       staff: {
@@ -64,6 +69,9 @@ export async function fetchSignedInStaff(): Promise<SignedIn | null> {
         name: me.name,
         email: me.email,
         avatarInitials: me.avatarInitials ?? initialsFor(me.name),
+        // What this account may do. Left out by a server from before tiers, and
+        // the panel treats that as "nothing it knows to grey out".
+        tier: me.tier,
       },
       mustChangePassword: me.mustChangePassword === true,
     };

@@ -366,9 +366,16 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.editButton:hover {
+.editButton:hover:not(:disabled) {
   background: var(--tile);
   color: var(--brand);
+}
+
+/* An account that may not change anything still sees where a change would be
+   made, greyed. Its title says why. */
+.editButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ==================================================================

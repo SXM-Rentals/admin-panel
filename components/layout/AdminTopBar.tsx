@@ -21,6 +21,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAdminSession } from '@/lib/auth';
+import { TIER_LABELS, TIER_MEANINGS } from '@/lib/tiers';
 import { Icon, IconButton, StatusPill, Text } from '@/components/ui';
 import type { AdminBooking, AdminProvider, AdminUser, AdminVehicle } from '@/types';
 import styles from './shell.module.css';
@@ -164,11 +165,16 @@ export function AdminTopBar({
               <Text variant="small" tone="ink3" as="p" raw>
                 {staff?.email}
               </Text>
-              {/* Said plainly, because somebody will wonder why there is no
-                  "permissions" entry in this menu. */}
-              <Text variant="caption" tone="ink3" as="p" raw style={{ marginTop: 6 }}>
-                Full access · one access level for all staff
-              </Text>
+              {/* WHAT THIS ACCOUNT IS, so somebody who finds an action greyed
+                  out elsewhere can see why from here. It used to say every
+                  account had full access, which stopped being true the day the
+                  server grew tiers. A server from before them says nothing about
+                  levels, and neither does this. */}
+              {staff?.tier ? (
+                <Text variant="caption" tone="ink3" as="p" raw style={{ marginTop: 6 }}>
+                  {TIER_LABELS[staff.tier]} · {TIER_MEANINGS[staff.tier]}
+                </Text>
+              ) : null}
             </div>
 
             <Link href="/account" className={styles.menuItem} role="menuitem">

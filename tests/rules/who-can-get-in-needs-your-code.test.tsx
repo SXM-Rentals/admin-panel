@@ -105,6 +105,9 @@ describe('the Staff screen', () => {
         name: 'Carla Ruiz',
         email: 'carla@sxmrentals.app',
         password: suggested,
+        // Administrator unless somebody picks otherwise: the everyday job, and
+        // never staff accounts. See what-each-kind-of-account-may-do.
+        tier: 'administrator',
         reason: 'Carla joins the support team on Monday.',
         code: '246810',
       }),
@@ -120,6 +123,7 @@ describe('the Staff screen', () => {
   });
 
   it('never offers to reset or remove your own account', async () => {
+    const user = userEvent.setup();
     serve({
       '/admin/me': ME,
       'GET /admin/staff': [account({ ...ME }), account({ id: 'st-carla', name: 'Carla Ruiz', email: 'carla@sxmrentals.app' })],
@@ -127,12 +131,16 @@ describe('the Staff screen', () => {
     render(<StaffPage />);
 
     await screen.findByText('Carla Ruiz');
-    // One of each — Carla's — and not a second pair on your own row. Waited
-    // for, because here (unlike in the panel) the list can arrive before the
-    // answer to "who am I".
-    await waitFor(() => expect(screen.getAllByRole('button', { name: /reset sign-in/i })).toHaveLength(1));
-    expect(screen.getAllByRole('button', { name: /remove access/i })).toHaveLength(1);
+    // One Manage menu — Carla's — and none on your own row, which offers your
+    // own account screen instead. Waited for, because here (unlike in the panel)
+    // the list can arrive before the answer to "who am I".
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /manage/i })).toHaveLength(1));
     expect(screen.getByText(/Your account/)).toBeInTheDocument();
+
+    // And what is inside it is about Carla, not about you.
+    await user.click(screen.getByRole('button', { name: /manage/i }));
+    expect(screen.getByRole('menuitem', { name: /reset sign-in/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /remove access/i })).toBeInTheDocument();
   });
 
   it('says so, and offers nothing that would fail, when the server has not been updated yet', async () => {

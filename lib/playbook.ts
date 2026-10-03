@@ -300,7 +300,7 @@ export const backendRoutes: { group: string; purpose: string }[] = [
   { group: 'POST /admin/auth/mfa/verify', purpose: 'The six-digit code — the step that actually signs somebody in' },
   { group: 'POST /admin/auth/logout', purpose: 'Signing out' },
   { group: 'GET /admin/me', purpose: 'Who is signed in, asked every time the panel opens' },
-  { group: 'POST /admin/auth/password', purpose: 'Changing your own password — waiting on the server update' },
+  { group: 'POST /admin/auth/password', purpose: 'Changing your own password' },
 
   // ---- THE DASHBOARD AND THE LOG ----
   { group: 'GET /admin/summary', purpose: 'The headline figures, all-time' },
@@ -308,10 +308,14 @@ export const backendRoutes: { group: string; purpose: string }[] = [
   { group: 'GET /admin/analytics', purpose: 'Money, bookings and sign-ups between any two dates' },
   { group: 'GET /admin/audit', purpose: 'Who changed what, when and why — written by the server' },
   { group: 'GET /admin/staff', purpose: 'Staff names, for assigning disputes — and every account, for the Staff screen' },
-  { group: 'POST /admin/staff', purpose: 'Adding a member of staff, with a reason and your code — waiting on the server update' },
-  { group: 'POST /admin/staff/:id/reset', purpose: 'Resetting a staff sign-in, with a reason and your code — waiting on the server update' },
-  { group: 'POST /admin/staff/:id/disable', purpose: 'Removing a staff member\u2019s access, with a reason and your code — waiting on the server update' },
-  { group: 'POST /admin/staff/:id/enable', purpose: 'Restoring a staff member\u2019s access, with a reason and your code — waiting on the server update' },
+  { group: 'POST /admin/staff', purpose: 'Adding a member of staff, with a reason and your code' },
+  { group: 'POST /admin/staff/:id/reset', purpose: 'Resetting a staff sign-in, with a reason and your code' },
+  {
+    group: 'POST /admin/staff/:id/tier',
+    purpose: 'Changing what somebody may do — Owner access and up, with a reason and your code',
+  },
+  { group: 'POST /admin/staff/:id/disable', purpose: 'Removing a staff member\u2019s access, with a reason and your code' },
+  { group: 'POST /admin/staff/:id/enable', purpose: 'Restoring a staff member\u2019s access, with a reason and your code' },
 
   // ---- CUSTOMERS ----
   { group: 'GET /admin/users', purpose: 'The customer list, searchable by name and email' },
@@ -368,6 +372,4 @@ export const notOnTheServerYet: string[] = [
   'Platform settings, including the commission rate',
   'Reading the messages on a booking',
   'A rental business\u2019s own documents and payout account',
-  'Editing or closing a rental business',
-  'Managing staff accounts and passwords — built in this panel, waiting on the server update in ADMIN_STAFF_ACCOUNTS_HANDOFF.md',
 ];

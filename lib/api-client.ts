@@ -37,6 +37,7 @@ import { api } from '@/lib/api/http';
 import { ApiError } from '@/lib/api/errors';
 import type {
   AdminBooking,
+  AdminTier,
   AdminPayout,
   AdminProvider,
   AdminStaff,
@@ -374,8 +375,11 @@ export const apiClient = {
     return api.get<StaffAccount[]>('/admin/staff', { query: { status: 'all' } });
   },
 
+  // The tier goes with it: what this account may do, decided when it is created
+  // rather than granted afterwards. The server refuses a tier at or above the
+  // asker's own, so this can fail on the tier alone.
   async createStaff(
-    account: { name: string; email: string; password: string },
+    account: { name: string; email: string; password: string; tier: AdminTier },
     reason: string,
     code: string,
   ): Promise<StaffAccount> {
@@ -401,6 +405,17 @@ export const apiClient = {
   async disableStaff(id: string, reason: string, code: string): Promise<StaffAccount> {
     return api.post<StaffAccount>(`/admin/staff/${encodeURIComponent(id)}/disable`, {
       body: { reason, code },
+    });
+  },
+
+  // ---- PROMOTING, DEMOTING, OR MOVING SOMEBODY TO READ-ONLY ----
+  // Refused on your own account whoever you are, on anybody at your own level or
+  // above, and for any level at or above your own. Godfather cannot be granted
+  // here at all. The panel says all four in advance — see lib/tiers.ts — and the
+  // server says them again.
+  async changeStaffTier(id: string, tier: AdminTier, reason: string, code: string): Promise<StaffAccount> {
+    return api.post<StaffAccount>(`/admin/staff/${encodeURIComponent(id)}/tier`, {
+      body: { tier, reason, code },
     });
   },
 

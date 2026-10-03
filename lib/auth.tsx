@@ -14,12 +14,20 @@
 // now exactly one answer to "who is signed in", and it comes from asking the
 // server.
 //
-// ONE FLAT ACCESS LEVEL. There is no permission check anywhere in this file
-// because there are no permissions: every admin account can see and do
-// everything at MVP. What there IS, on every action, is a written record of who
-// did it and why. Accountability rather than restriction is a deliberate choice
-// for a small team, and the audit log is what makes it a choice rather than an
-// oversight.
+// WHAT THIS ACCOUNT MAY DO COMES FROM THE SERVER, TOO. `GET /admin/me` says
+// which of the four levels this account is — Godfather, Owner, Administrator,
+// Viewer — and that is carried on the session so screens can grey out what this
+// person cannot use and say why. See lib/tiers.ts, which mirrors the server's
+// rules for exactly that purpose and keeps none of them.
+//
+// IT IS NOT A PERMISSION CHECK, AND MUST NOT BE MISTAKEN FOR ONE. The server
+// refuses every change from a viewer by the method of the request, and checks the
+// tier of whoever sent anything else; nothing in the panel keeps anybody out.
+//
+// AND IT DID NOT REPLACE THE AUDIT LOG. The original trade here was
+// accountability rather than restriction: everybody could do anything, and
+// everything anybody did was on the record with a reason. Tiers were added on top
+// of that record. The log is unchanged for every level, including the Godfather.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
@@ -32,7 +40,8 @@ import {
   type NextStep,
 } from '@/lib/api/auth';
 import { setSessionLostHandler } from '@/lib/api/http';
-import type { AdminStaff } from '@/types';
+import type { AdminStaff, AdminTier } from '@/types';
+import { whyCannotChange } from '@/lib/tiers';
 
 // Where the session currently stands.
 //
@@ -50,6 +59,18 @@ export type SessionPhase = 'checking' | 'unreachable' | 'signed-out' | 'signed-i
 type SessionValue = {
   staff: AdminStaff | null;
   isSignedIn: boolean;
+  // ---- WHAT THIS ACCOUNT MAY DO ----
+  // Carried here as well as on `staff` because nearly every screen needs it and
+  // none of them should have to remember where it lives. Undefined until the
+  // server has answered, and on a server from before tiers; lib/tiers.ts treats
+  // that as "nothing to grey out" and lets the server refuse.
+  //
+  // IT IS FOR SAYING SO IN ADVANCE, NOT FOR KEEPING ANYBODY OUT. The server
+  // checks the tier of every request it is sent.
+  tier: AdminTier | undefined;
+  // The sentence to show instead of a change control, or undefined when there is
+  // nothing to say. A viewer sees the panel and changes nothing.
+  whyNoChanges: string | undefined;
   // True until we have asked the server who is signed in. The panel layout uses
   // it to avoid throwing a signed-in person to the sign-in screen for a split
   // second on every page load.
@@ -158,6 +179,8 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
   const value = useMemo<SessionValue>(
     () => ({
       staff,
+      tier: staff?.tier,
+      whyNoChanges: whyCannotChange(staff?.tier),
       // Still counted as signed in while locked, so the panel behind the
       // sign-in stays mounted and nothing typed is lost.
       isSignedIn: phase === 'signed-in' || phase === 'locked',

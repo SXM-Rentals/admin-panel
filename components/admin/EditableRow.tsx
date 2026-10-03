@@ -25,6 +25,7 @@
 import React, { useState } from 'react';
 import { ReasonDialog } from './ReasonDialog';
 import { Button, Icon, Text } from '@/components/ui';
+import { useAdminSession } from '@/lib/auth';
 import styles from './admin.module.css';
 
 export type EditableRowProps = {
@@ -64,6 +65,11 @@ export function EditableRow({
   valueNode,
   onSave,
 }: EditableRowProps) {
+  // A viewer sees the record and no pencil that works. Greyed and explained
+  // rather than removed: a missing pencil looks like a field nobody may ever
+  // change, which is not what is true here.
+  const { whyNoChanges } = useAdminSession();
+
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [confirming, setConfirming] = useState(false);
@@ -135,9 +141,10 @@ export function EditableRow({
             <button
               type="button"
               className={styles.editButton}
-              onClick={start}
+              onClick={whyNoChanges ? undefined : start}
+              disabled={whyNoChanges !== undefined}
               aria-label={`Edit ${label.toLowerCase()}`}
-              title={`Edit ${label.toLowerCase()}`}
+              title={whyNoChanges ?? `Edit ${label.toLowerCase()}`}
             >
               <Icon name="create-outline" size={15} />
             </button>

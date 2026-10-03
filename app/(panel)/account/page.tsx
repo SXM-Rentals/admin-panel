@@ -14,6 +14,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAdminSession } from '@/lib/auth';
+import { TIER_LABELS, TIER_MEANINGS } from '@/lib/tiers';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { ChangePasswordForm } from '@/components/admin/ChangePasswordForm';
 import { InfoRow, InfoRows, Note } from '@/components/admin/shared';
@@ -39,7 +40,13 @@ export default function AccountPage() {
             <InfoRows>
               <InfoRow label="Name" value={staff?.name ?? '—'} />
               <InfoRow label="Email" value={staff?.email ?? '—'} />
-              <InfoRow label="Access" value="Full access — one access level for all staff" />
+              {/* What YOUR account may do. The panel greys out what this level
+                  cannot use and says why where it does it; the server refuses it
+                  again regardless. */}
+              <InfoRow
+                label="Access level"
+                value={staff?.tier ? `${TIER_LABELS[staff.tier]} — ${TIER_MEANINGS[staff.tier]}` : 'Not said'}
+              />
             </InfoRows>
           </PageCard>
 

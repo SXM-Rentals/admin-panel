@@ -23,10 +23,14 @@ import type {
 } from './index';
 
 // ---- STAFF ----
-// One flat access level at MVP. There is deliberately no "role" field: the admin
-// doc says every admin account can see and do everything, and inventing a role
-// that nothing reads would suggest permissions exist when they do not. Adding
-// tiers later means adding the field and the checks that go with it, together.
+// FOUR LEVELS, IN THIS ORDER, highest first. The order is the hierarchy, so it is
+// not cosmetic — see lib/tiers.ts, which mirrors the server's rules about who may
+// act on whom. There used to be one flat level, and the trade behind that was
+// accountability rather than restriction: everybody could do anything, and
+// everything anybody did was on the record with a reason. Tiers add restriction
+// on top of that record; the audit log is unchanged for every tier.
+export type AdminTier = 'godfather' | 'owner' | 'administrator' | 'viewer';
+
 export type AdminStaff = {
   id: string;
   name: string;
@@ -34,6 +38,11 @@ export type AdminStaff = {
   // Shown beside their name in the top bar and against their entries in the
   // audit log, so "who did this" is a face as well as a name.
   avatarInitials: string;
+  // What this account may do. OPTIONAL BECAUSE A SERVER FROM BEFORE TIERS DOES
+  // NOT SAY — and there every account could do everything, so the panel treats
+  // "not said" as "no restriction it knows about" and lets the server refuse.
+  // Guessing the other way would grey out controls that work.
+  tier?: AdminTier;
 };
 
 // ---- A STAFF ACCOUNT, AS THE STAFF SCREEN SEES IT ----

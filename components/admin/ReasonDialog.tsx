@@ -40,6 +40,7 @@ import React, { useEffect, useState } from 'react';
 import { Button, Icon, Input, Sheet, Text, TextArea, useToast } from '@/components/ui';
 import { ApiError, PartialChange, presentError } from '@/lib/api/errors';
 import { money } from '@/lib/format';
+import { useAdminSession } from '@/lib/auth';
 import styles from './admin.module.css';
 
 // The shortest reason worth recording. See the note above.
@@ -177,7 +178,18 @@ export function ReasonDialog({
       ? undefined
       : 'Enter the six digits your authenticator app shows now.';
 
-  const blocked = tooShort || amountProblem !== undefined || codeProblem !== undefined;
+  // ---- AN ACCOUNT THAT CHANGES NOTHING ----
+  // Every change in this panel comes through this dialog, which makes it the one
+  // place that can tell a viewer the truth wherever they pressed. Said here as
+  // well as wherever the button was, because a dialog that opens and then refuses
+  // without explaining is worse than a button that was never offered.
+  //
+  // It is not what stops them: the server refuses every change from a viewer by
+  // the method of the request, whatever this panel does. See lib/tiers.ts.
+  const { whyNoChanges } = useAdminSession();
+
+  const blocked =
+    whyNoChanges !== undefined || tooShort || amountProblem !== undefined || codeProblem !== undefined;
 
   const submit = async () => {
     setTouched(true);
@@ -275,6 +287,15 @@ export function ReasonDialog({
             {change.subjectLabel}
           </Text>
         </div>
+
+        {whyNoChanges ? (
+          <div className={styles.dialogProblem} role="alert">
+            <Icon name="lock-closed-outline" size={16} color="var(--danger)" />
+            <Text variant="small" as="p" raw>
+              {whyNoChanges}
+            </Text>
+          </div>
+        ) : null}
 
         {problem ? (
           <div className={styles.dialogProblem} role="alert">
