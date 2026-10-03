@@ -327,18 +327,6 @@
 
 /* A phone number that must not break mid-digits, with its marker beneath rather
    than squeezed alongside. */
-.ownerNumber {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--hairline);
-}
-
-.ownerNumber .pillRow {
-  gap: var(--space-sm);
-}
-
 /* ---- EDITING A SINGLE FIELD IN PLACE ---- */
 .editControl {
   display: inline-flex;

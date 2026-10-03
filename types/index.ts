@@ -36,6 +36,8 @@ export type User = {
 
 // ---- RENTAL BUSINESSES ----
 
+export type RespondsIn = '' | 'within_hour' | 'within_hours' | 'within_day';
+
 // PUBLIC information about a rental business — the things any customer is
 // allowed to see. Everything on this type appears on the business's public page.
 // Nothing private (earnings, payouts, booking counts) belongs here.
@@ -47,7 +49,11 @@ export type Provider = {
   rating: number;
   reviewCount: number;
   isVerified: boolean; // has passed the SXM Verified checks
-  respondsIn: string; // e.g. "usually replies within an hour"
+  // HOW SOON THEY ANSWER, AS A CODE RATHER THAN A SENTENCE. The server keeps
+  // one of three codes (and '' until somebody sets it), so the apps can say it
+  // in whichever language they are in. Nothing may print this value: see
+  // RESPONDS_IN_LABELS in components/admin/shared.tsx.
+  respondsIn: RespondsIn;
   phone: string;
 
   // Shown on the public business page.

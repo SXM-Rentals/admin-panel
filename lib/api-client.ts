@@ -48,6 +48,7 @@ import type {
   DisputeCase,
   LedgerEntry,
   PlatformSummary,
+  ProviderField,
   QueueItem,
   RefundRequest,
   SeriesPoint,
@@ -164,6 +165,49 @@ export const apiClient = {
   async decideProviderVerification(id: string, approve: boolean, reason: string): Promise<AdminProvider> {
     return api.post<AdminProvider>(`/admin/providers/${encodeURIComponent(id)}/verification`, {
       body: { approve, reason },
+    });
+  },
+
+  // ---- CORRECTING A BUSINESS'S DETAILS ----
+  // One field at a time, with a reason, exactly like a customer's record. The
+  // server types each field separately — `side` and `respondsIn` are codes,
+  // delivery and airport pickup are yes or no — so this takes the value as it
+  // will be sent rather than as text.
+  //
+  // A business's details are its own to change from its own account. This is for
+  // the narrow job of fixing something it cannot or will not fix itself: a legal
+  // name misspelled on a payout, an email that bounces.
+  async updateProviderField(
+    id: string,
+    field: ProviderField,
+    value: string | boolean,
+    reason: string,
+  ): Promise<AdminProvider> {
+    return api.patch<AdminProvider>(`/admin/providers/${encodeURIComponent(id)}`, {
+      body: { field, value, reason },
+    });
+  },
+
+  // ---- CLOSING A BUSINESS, AND OPENING IT AGAIN ----
+  // Both ask for the authenticator code as well as a reason, as the server does:
+  // this takes a whole fleet off the site and a business's page down, so a
+  // session left open on a desk is not enough on its own.
+  //
+  // The server refuses while money is in the air — a rental running, a deposit
+  // held, a payout on its way — and names what is in the way. Those sentences
+  // reach the person unchanged.
+  async closeProvider(id: string, reason: string, code: string): Promise<AdminProvider> {
+    return api.post<AdminProvider>(`/admin/providers/${encodeURIComponent(id)}/close`, {
+      body: { reason, code },
+    });
+  },
+
+  // NOTE WHAT THIS DOES NOT DO: the cars stay suspended. The business may trade
+  // again, and each car goes back on the site as its own decision. The screen
+  // says so before anybody presses the button.
+  async reopenProvider(id: string, reason: string, code: string): Promise<AdminProvider> {
+    return api.post<AdminProvider>(`/admin/providers/${encodeURIComponent(id)}/reopen`, {
+      body: { reason, code },
     });
   },
 

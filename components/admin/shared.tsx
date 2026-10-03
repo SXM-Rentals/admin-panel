@@ -22,6 +22,7 @@ import type {
   BookingStatus,
   DisputeCase,
   DepositStatus,
+  RespondsIn,
   VerificationStatus,
 } from '@/types';
 import styles from './admin.module.css';
@@ -34,6 +35,17 @@ export const VERIFICATION_STYLE: Record<VerificationStatus, { label: string; ton
   rejected: { label: 'Rejected', tone: 'danger' },
   resubmit: { label: 'Resubmit', tone: 'warning' },
   unstarted: { label: 'Not Started', tone: 'neutral' },
+};
+
+// ---- HOW SOON A BUSINESS ANSWERS ----
+// The server keeps a code so the customer apps can say it in their own language.
+// Printing the code would put "within_hours" on the screen, so every screen goes
+// through here. The words match the server's own audit wording, "Replies within".
+export const RESPONDS_IN_LABELS: Record<RespondsIn, string> = {
+  '': 'Not said',
+  within_hour: 'Within an hour',
+  within_hours: 'Within a few hours',
+  within_day: 'Within a day',
 };
 
 export const BOOKING_STYLE: Record<BookingStatus, { label: string; tone: StatusTone }> = {

@@ -15,6 +15,7 @@ import type {
   BookingStatus,
   DepositStatus,
   Provider,
+  RespondsIn,
   RewardTier,
   User,
   VehicleClass,
@@ -127,6 +128,28 @@ export type VehicleDocument = {
 
 // The provider record as STAFF see it — the public profile, plus everything a
 // customer never sees.
+// ---- THE DETAILS STAFF MAY CORRECT ON A BUSINESS ----
+// Exactly what the server accepts, and in the same words. Not here, on purpose:
+// the verification status and the rating. Verification has its own decision and
+// its own audit entry, and two ways to set the same thing is how an audit log
+// stops being worth reading; a rating is the sum of what customers said, and a
+// staff-editable rating is not a rating.
+export type ProviderField =
+  | 'businessName'
+  | 'town'
+  | 'description'
+  | 'phone'
+  | 'legalName'
+  | 'contactEmail'
+  | 'website'
+  | 'registrationNumber'
+  | 'ownerName'
+  | 'ownerPhone'
+  | 'side'
+  | 'respondsIn'
+  | 'deliversVehicles'
+  | 'airportPickup';
+
 export type AdminProvider = Provider & {
   legalName: string;
   contactEmail: string;
@@ -156,6 +179,17 @@ export type AdminProvider = Provider & {
   // account's status, it does not hand that to the admin panel yet. Both are
   // backend jobs; until then the screens say so rather than showing something
   // made up.
+  // WHEN THE BUSINESS CLOSED, or null while it is open. Always sent, either way.
+  //
+  // A business can close itself from its own account, and before the server sent
+  // this the panel had no way of knowing: one that closed last week appeared as
+  // an ordinary open business, badge intact, with a fleet of cars all suspended
+  // and no reason anywhere for why. Somebody would have rung them about it.
+  //
+  // Closed, not deleted: the row stays so past bookings and payouts still point
+  // at something, and a closed business stays in the list the way a closed
+  // customer account does.
+  closedAt: string | null;
   vehicleCount: number;
   // Lifetime figures, so a name in the list carries some weight behind it.
   bookingCount: number;

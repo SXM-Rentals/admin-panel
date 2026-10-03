@@ -323,6 +323,15 @@ export const backendRoutes: { group: string; purpose: string }[] = [
   // ---- RENTAL BUSINESSES ----
   { group: 'GET /admin/providers', purpose: 'The rental business list' },
   { group: 'GET /admin/providers/:id', purpose: 'One business in full' },
+  { group: 'PATCH /admin/providers/:id', purpose: 'Correcting one detail of a business, with a reason' },
+  {
+    group: 'POST /admin/providers/:id/close',
+    purpose: 'Closing a business — every car comes off the site. Reason and your authenticator code',
+  },
+  {
+    group: 'POST /admin/providers/:id/reopen',
+    purpose: 'Opening a closed business again. Its cars stay off the site until each is put back',
+  },
   { group: 'POST /admin/providers/:id/verification', purpose: 'The SXM Verified decision, with a reason' },
 
   // ---- VEHICLES ----

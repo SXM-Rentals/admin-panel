@@ -23,7 +23,7 @@ import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { VerificationPill } from '@/components/admin/shared';
-import { ActionMenu, Button, Text } from '@/components/ui';
+import { ActionMenu, Button, StatusPill, Text } from '@/components/ui';
 import type { AdminProvider, VerificationStatus } from '@/types';
 
 type StatusFilter = 'all' | VerificationStatus;
@@ -76,7 +76,17 @@ export default function ProvidersPage() {
       id: 'verification',
       header: 'Verification',
       sortValue: (p) => p.verificationStatus,
-      cell: (p) => <VerificationPill status={p.verificationStatus} />,
+      // A CLOSED BUSINESS SAYS SO HERE, instead of its badge. Until the server
+      // sent `closedAt` the panel could not tell, and one that closed itself last
+      // week sat in this list looking like any other — badge intact, fleet all
+      // suspended, no reason anywhere. Whether it was verified is beside the
+      // point once it has gone, so the pill says the thing that matters.
+      cell: (p) =>
+        p.closedAt ? (
+          <StatusPill label="Closed" tone="danger" />
+        ) : (
+          <VerificationPill status={p.verificationStatus} />
+        ),
     },
     // No payout-account column: the server keeps whether each business can be
     // paid, but does not send it to the admin panel yet. A column of blanks, or
@@ -156,7 +166,7 @@ export default function ProvidersPage() {
           rows={rows}
           columns={columns}
           rowKey={(p) => p.id}
-          rowMuted={(p) => p.verificationStatus === 'rejected'}
+          rowMuted={(p) => Boolean(p.closedAt) || p.verificationStatus === 'rejected'}
           loading={loading}
           initialSort={{ columnId: 'volume', direction: 'desc' }}
           emptyTitle="No businesses match"
@@ -164,9 +174,14 @@ export default function ProvidersPage() {
           // OPEN, AND EVERYTHING ELSE UNDER ONE MENU. A row has space for two
           // controls and a business has four things you might do to it, which is
           // how this panel ended up with "Modify" and "View" side by side both
-          // opening the same screen. The two that the server cannot do yet are
-          // in the menu too, greyed, with the reason — left out, somebody hunts
-          // for them through five screens.
+          // opening the same screen.
+          //
+          // EVERY ITEM NOW DOES SOMETHING. Editing a business's details and
+          // closing one were greyed out here, saying the server did not offer
+          // them; it does now. Each one needs the business in front of you — the
+          // details to edit them one at a time, the fleet to see what a closure
+          // takes off the site — so they open the business with the decision
+          // already chosen rather than firing from a row.
           rowActions={(p) => (
             <>
               <Button
@@ -181,7 +196,9 @@ export default function ProvidersPage() {
                   {
                     label: 'Edit their details',
                     icon: 'create-outline',
-                    unavailable: 'The server does not offer this yet.',
+                    ...(p.closedAt
+                      ? { unavailable: 'This business is closed. Open it again first.' }
+                      : { onSelect: () => router.push(`/providers/${p.id}`) }),
                   },
                   {
                     label: p.verificationStatus === 'pending' ? 'Decide verification' : 'Verification decision',
@@ -189,21 +206,25 @@ export default function ProvidersPage() {
                     onSelect: () => router.push(`/providers/${p.id}/verification`),
                   },
                   {
-                    // Opens the business itself with the dialog up, rather than
-                    // firing from here: it takes every one of their live cars
-                    // down, and nobody should set that off from a row where they
-                    // cannot see which cars those are.
                     label: 'Stop them trading',
                     icon: 'pause-outline',
                     destructive: true,
-                    onSelect: () => router.push(`/providers/${p.id}?stop=1`),
+                    ...(p.closedAt
+                      ? { unavailable: 'This business is closed — its cars are already off the site.' }
+                      : { onSelect: () => router.push(`/providers/${p.id}?stop=1`) }),
                   },
-                  {
-                    label: 'Close the business',
-                    icon: 'trash-outline',
-                    destructive: true,
-                    unavailable: 'The server does not offer this yet.',
-                  },
+                  p.closedAt
+                    ? {
+                        label: 'Open the business again',
+                        icon: 'refresh',
+                        onSelect: () => router.push(`/providers/${p.id}?reopen=1`),
+                      }
+                    : {
+                        label: 'Close the business',
+                        icon: 'trash-outline',
+                        destructive: true,
+                        onSelect: () => router.push(`/providers/${p.id}?close=1`),
+                      },
                 ]}
               />
             </>

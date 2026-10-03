@@ -41,6 +41,10 @@ export type EditableRowProps = {
   emptyText?: string;
   // A line under the box explaining anything that follows from the change.
   hint?: string;
+  // HOW TO SHOW THE VALUE when the plain text is not the best way to show it —
+  // a website that should be clickable. Only the display changes: the value is
+  // still what gets edited, and the audit entry still records the text.
+  valueNode?: React.ReactNode;
   // Given the new value AND the reason typed into the dialog. The reason used to
   // stop here — the dialog kept it for its own log entry and the save never saw
   // it. Now the server writes the log entry, so the save has to carry the reason
@@ -57,6 +61,7 @@ export function EditableRow({
   inputType = 'text',
   emptyText = 'None on file',
   hint,
+  valueNode,
   onSave,
 }: EditableRowProps) {
   const [editing, setEditing] = useState(false);
@@ -119,9 +124,11 @@ export function EditableRow({
           </div>
         ) : (
           <span className={styles.editControl}>
-            <Text variant="label" tone={value ? 'ink' : 'ink3'} as="span" raw>
-              {value ? readable(value) : emptyText}
-            </Text>
+            {valueNode ?? (
+              <Text variant="label" tone={value ? 'ink' : 'ink3'} as="span" raw>
+                {value ? readable(value) : emptyText}
+              </Text>
+            )}
             {/* A quiet pencil rather than a button on every row. The rows are
                 mostly read, and a column of Edit buttons would make the record
                 look like a form. */}
