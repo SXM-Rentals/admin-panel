@@ -55,7 +55,13 @@ export default function VehiclesPage() {
       header: 'Vehicle',
       sortValue: (v) => `${v.make} ${v.model}`,
       cell: (v) => (
-        <CellStack title={`${v.make} ${v.model} ${v.year}`} detail={v.reference} />
+        // The plate first in the detail line: it is what anybody on a phone
+        // call has in front of them. Our own reference second, for the rare
+        // case where somebody is quoting that instead.
+        <CellStack
+          title={`${v.make} ${v.model} ${v.year}`}
+          detail={v.registration ? `${v.registration} · ${v.reference}` : v.reference}
+        />
       ),
     },
     {

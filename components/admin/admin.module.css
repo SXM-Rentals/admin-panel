@@ -763,3 +763,109 @@
   border-left: 2px solid var(--hairline);
   color: var(--ink2);
 }
+
+/* ==================================================================
+   A CONVERSATION WITH A CUSTOMER
+   Ours on one side, theirs on the other, oldest first. Plain blocks
+   rather than chat bubbles: this is a record being read at a desk, not
+   a messaging app.
+   ================================================================== */
+.messageList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.messageFromThem,
+.messageFromUs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  max-width: 78%;
+}
+
+.messageFromThem {
+  background: var(--tile);
+  align-self: flex-start;
+}
+
+/* Ours sits to the right and carries the brand edge, so a long thread
+   can be skimmed for "did we answer" without reading a word. */
+.messageFromUs {
+  align-self: flex-end;
+  border-left: 2px solid var(--brand);
+}
+
+.messageWho {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+/* ==================================================================
+   WHAT HAS BEEN HAPPENING
+   One row per event, newest first. A mark, what happened, and when.
+   ================================================================== */
+.timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.timelineRow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--hairline);
+  transition: background-color 0.15s ease;
+}
+
+.timelineRow:last-child {
+  border-bottom: none;
+}
+
+.timelineRow:hover {
+  background: var(--tile);
+}
+
+.timelineMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timelineText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.timelineWhen {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  white-space: nowrap;
+}
+
+/* ---- THE SIGNATURE ON A RENTAL AGREEMENT ----
+   A pale panel so the ink reads, whatever the drawing came out like. */
+.signatureBox {
+  margin-top: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--tile);
+}
+
+.signatureInk {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  color: var(--ink);
+}

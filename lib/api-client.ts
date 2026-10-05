@@ -38,7 +38,11 @@ import { ApiError } from '@/lib/api/errors';
 import type {
   AdminBooking,
   AdminTier,
+  BookingAgreement,
   FleetRequest,
+  IdentityDecision,
+  SupportConversation,
+  SupportSummary,
   AdminPayout,
   AdminProvider,
   AdminStaff,
@@ -292,9 +296,13 @@ export const apiClient = {
   // Approving sends the money back through Stripe. The server refuses if the
   // refund has already been decided, and cannot approve one at all until
   // Stripe is connected — both come back as a sentence the dialog shows.
-  async decideRefund(id: string, approve: boolean, reason: string): Promise<void> {
+  // THE CUSTOMER NOTE IS WHAT THEY READ, and it is not the reason. The reason
+  // goes to the audit log and can be internal — "approved under the 48-hour
+  // rule, third request this month" — while the note is the sentence sent to the
+  // person waiting on their money. Optional, because the server allows it to be.
+  async decideRefund(id: string, approve: boolean, reason: string, customerNote?: string): Promise<void> {
     await api.post<void>(`/admin/refunds/${encodeURIComponent(id)}/decision`, {
-      body: { approve, reason },
+      body: customerNote ? { approve, reason, customerNote } : { approve, reason },
     });
   },
 
@@ -345,6 +353,48 @@ export const apiClient = {
     return api.post<DisputeCase>(`/admin/disputes/${encodeURIComponent(id)}/resolve`, {
       body: { notes, reason },
     });
+  },
+
+  // ---- WHAT CUSTOMERS WROTE TO US ----
+  // Waiting-for-an-answer first, which is the server's own order.
+  async listSupportConversations(): Promise<SupportSummary[]> {
+    return api.get<SupportSummary[]>('/admin/support');
+  },
+
+  // Keyed by the customer, because the conversation is the customer.
+  async getSupportConversation(customerId: string): Promise<SupportConversation | undefined> {
+    return orNotFound(api.get<SupportConversation>(`/admin/support/${encodeURIComponent(customerId)}`));
+  },
+
+  // NO REASON, AND NO AUDIT ENTRY. This is correspondence, not a change to a
+  // record: there is no before and after for a reason to explain. What it does
+  // need is care, because the customer reads it.
+  async replyToCustomer(customerId: string, body: string): Promise<SupportConversation> {
+    return api.post<SupportConversation>(`/admin/support/${encodeURIComponent(customerId)}/messages`, {
+      body: { body },
+    });
+  },
+
+  // ---- WHETHER SOMEBODY IS WHO THEY SAY THEY ARE ----
+  // Three answers, not two: "resubmit" is the kind refusal — something was
+  // unreadable, send it again — and it is the one staff will reach for most.
+  //
+  // The customer message is what THEY read. The reason is for the audit log, and
+  // may be internal, so the two are kept apart.
+  async decideUserVerification(
+    id: string,
+    decision: IdentityDecision,
+    reason: string,
+    customerMessage?: string,
+  ): Promise<void> {
+    await api.post<void>(`/admin/users/${encodeURIComponent(id)}/verification`, {
+      body: customerMessage ? { decision, reason, customerMessage } : { decision, reason },
+    });
+  },
+
+  // ---- WHAT THE RENTER SIGNED ----
+  async getBookingAgreement(id: string): Promise<BookingAgreement | undefined> {
+    return orNotFound(api.get<BookingAgreement>(`/admin/bookings/${encodeURIComponent(id)}/agreement`));
   },
 
   // ---- BUSINESSES ASKING US TO SET THEIR FLEET UP ----

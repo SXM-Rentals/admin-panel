@@ -232,6 +232,9 @@ export type AdminVehicle = {
   dailyRate: number;
   side: 'dutch' | 'french';
   listingStatus: 'live' | 'pending_review' | 'suspended';
+  // The number plate. The one thing anybody asks for on a phone call about a
+  // car, and the server has been sending it for a while.
+  registration?: string;
 };
 
 // ONE vehicle, opened on its own, also carries its paperwork. The list of all
@@ -437,6 +440,61 @@ export type QueueItem = {
   // How long it has been sitting there. Sorts the oldest to the top.
   urgency: 'normal' | 'aging' | 'overdue';
 };
+
+// ---- WHAT A CUSTOMER WROTE TO US ----
+// Help and support messages from the apps and the website. One conversation per
+// customer rather than a ticket each: somebody who writes three times about the
+// same rental has one conversation, which is how the person answering wants to
+// read it.
+export type SupportSummary = {
+  // The conversation IS the customer, so this is both.
+  customerId: string;
+  customerName: string;
+  lastMessageAt: string;
+  // True when the customer wrote last, so nobody has answered yet.
+  waitingForStaff: boolean;
+  messageCount: number;
+  // The first 140 characters of the last message, for the list.
+  preview: string;
+};
+
+export type SupportMessage = {
+  id: string;
+  from: 'customer' | 'staff';
+  body: string;
+  sentAt: string;
+  // Which member of staff answered. Absent on a customer's own message.
+  staffName?: string;
+  // Set when the customer wrote from a booking, so the answer can be read in
+  // context rather than guessed at.
+  bookingId?: string;
+};
+
+export type SupportConversation = {
+  customerId: string;
+  customerName: string;
+  messages: SupportMessage[];
+};
+
+// ---- WHAT THE RENTER SIGNED ----
+// The rental agreement, and the signature they drew on it.
+//
+// THE LINES ARE DRAWN BY THE PANEL, NEVER PUT INTO THE PAGE AS MARK-UP. Each
+// stroke arrives as "M12.0,40.5 L13.5,41.0" and the screen turns it into numbers
+// before drawing it. The server is strict about what it stores for exactly this
+// reason, and the panel does not rely on that alone.
+export type BookingAgreement = {
+  signedAt: string | null;
+  version: string;
+  signature: { width: number; height: number; strokes: string[] } | null;
+  // Where it was signed from, kept because a signature is evidence.
+  platform: string | null;
+  ipAddress: string | null;
+};
+
+// What staff decide about somebody's identity papers. "resubmit" is the kind
+// refusal: something was unreadable, send it again.
+export type IdentityDecision = 'approved' | 'rejected' | 'resubmit';
 
 // ---- A BUSINESS ASKING US TO SET ITS FLEET UP ----
 // Not every rental business on this island keeps its cars in a spreadsheet, let

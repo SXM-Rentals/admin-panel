@@ -18,6 +18,7 @@
 // where somebody would most likely be tempted to total them together.
 
 import React from 'react';
+import { BookingSignature } from '@/components/admin/BookingSignature';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
@@ -153,7 +154,19 @@ export default function BookingDetailPage() {
               SXM Rentals server does not offer it. Until it does, this panel cannot say whether
               any messages were sent on this booking.
             </Note>
+            <div style={{ marginTop: 'var(--space-md)' }}>
+              <Note>
+                What the customer wrote to <strong>us</strong> is a different conversation, and that
+                one can be read — on the Messages screen, under their name.
+              </Note>
+            </div>
           </PageCard>
+
+          {/* ---- WHAT THEY SIGNED ----
+              Its own card rather than a line on The Rental, because "signed" is
+              not the useful part: the useful part is what they signed, when, and
+              from where, which is what a disputed charge turns on. */}
+          <BookingSignature bookingId={booking.id} signedOnFile={booking.agreementSigned} />
         </div>
 
         <div className={styles.detailStack}>

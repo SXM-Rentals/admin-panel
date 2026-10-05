@@ -20,7 +20,7 @@ import React, { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import { money, shortDate } from '@/lib/format';
+import { money, relativeDay, shortDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -96,6 +96,16 @@ function BookingsList() {
           detail={`booked ${shortDate(b.createdAt)}`}
         />
       ),
+    },
+    {
+      // WHEN IT CAME IN, as its own column. The dates column says it too, in
+      // small print, but a figure you cannot sort by does not answer "what has
+      // come in today" — which is the question somebody opening this screen in
+      // the morning actually has. The table opens on this, newest first.
+      id: 'booked',
+      header: 'Booked',
+      sortValue: (b) => b.createdAt,
+      cell: (b) => relativeDay(b.createdAt),
     },
     {
       id: 'status',
@@ -220,7 +230,7 @@ function BookingsList() {
           rowKey={(b) => b.id}
           rowMuted={(b) => b.status === 'cancelled'}
           loading={loading}
-          initialSort={{ columnId: 'dates', direction: 'desc' }}
+          initialSort={{ columnId: 'booked', direction: 'desc' }}
           emptyTitle="No bookings match"
           emptyMessage="Try a shorter search, or clear the filters above."
           rowActions={(b) => (

@@ -27,10 +27,11 @@ import { money, longDate, relativeDay } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { ReasonDialog } from '@/components/admin/ReasonDialog';
-import { InfoRow, InfoRows, Note, VerificationPill, YesNo } from '@/components/admin/shared';
+import { InfoRow, InfoRows, Note, VERIFICATION_STYLE, VerificationPill, YesNo } from '@/components/admin/shared';
 import { EditableRow } from '@/components/admin/EditableRow';
 import { CloseAccount } from '@/components/admin/CloseAccount';
 import { Button, Skeleton, Text } from '@/components/ui';
+import type { IdentityDecision } from '@/types';
 import styles from '@/components/admin/admin.module.css';
 
 export default function UserDetailPage() {
@@ -42,6 +43,9 @@ export default function UserDetailPage() {
   // The number typed into the box, and whether the dialog is open.
   const [newPoints, setNewPoints] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Which identity decision is being confirmed, if any.
+  const [decision, setDecision] = useState<IdentityDecision | null>(null);
 
   // Could not be fetched is not the same as "no such customer". See LoadFailed.
   if (error) return <LoadFailed title="Customer" what="This customer" error={error} onRetry={refresh} />;
@@ -193,6 +197,48 @@ export default function UserDetailPage() {
                 </Text>
               </div>
             ) : null}
+
+            {/* ---- THE DECISION ----
+                THREE ANSWERS, NOT TWO, and the third is the one most used. A
+                licence photographed in the dark is not a forgery: "ask them
+                again" lets somebody try once more, and refusing outright is for
+                papers that are wrong rather than unreadable.
+
+                WHAT THE PANEL CANNOT DO IS SHOW THE DOCUMENTS. The server says
+                which ones have been sent and nothing more, so this decision is
+                made on the ticks above and whatever was checked elsewhere. Said
+                plainly, because a decision screen that looks complete invites
+                somebody to approve on the strength of three ticks. */}
+            <div style={{ marginTop: 'var(--space-lg)' }}>
+              <Note icon="warning-outline" tone="ink2">
+                The panel cannot show the documents themselves — the server sends only whether each
+                one has arrived. Approving on the strength of the ticks above is approving something
+                nobody on this screen has looked at.
+              </Note>
+            </div>
+
+            <div style={{ marginTop: 'var(--space-lg)', display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+              <Button
+                label="Approve"
+                variant="primary"
+                size="md"
+                disabled={user.verification.status === 'approved'}
+                onClick={() => setDecision('approved')}
+              />
+              <Button
+                label="Ask Them Again"
+                variant="secondary"
+                size="md"
+                onClick={() => setDecision('resubmit')}
+              />
+              <Button
+                label="Turn Down"
+                variant="danger"
+                size="md"
+                disabled={user.verification.status === 'rejected'}
+                onClick={() => setDecision('rejected')}
+              />
+            </div>
           </PageCard>
 
           {/* ---- CLOSING THE ACCOUNT ----
@@ -270,6 +316,61 @@ export default function UserDetailPage() {
           </PageCard>
         </div>
       </div>
+
+      {/* ---- CONFIRMING AN IDENTITY DECISION ----
+          Two pieces of writing again, for the same reason as a refund: the reason
+          is for the audit log and may be internal, and the message is what the
+          customer reads. On a refusal or a request to try again the message is
+          required — being turned down with no explanation is how somebody ends up
+          ringing to ask what to do, which is both unkind and more work. */}
+      {decision ? (
+        <ReasonDialog
+          open
+          onClose={() => setDecision(null)}
+          title={
+            decision === 'approved'
+              ? `Approve ${fullName}`
+              : decision === 'resubmit'
+                ? `Ask ${fullName} to send their papers again`
+                : `Turn down ${fullName}`
+          }
+          description={
+            decision === 'approved'
+              ? 'They can book straight away. Approve only what you have actually seen.'
+              : decision === 'resubmit'
+                ? 'They keep their account and can send their documents again. Use this when something was unreadable rather than wrong.'
+                : 'They cannot book. Use this for papers that are wrong, not for a photograph that came out badly.'
+          }
+          confirmLabel={decision === 'approved' ? 'Approve' : decision === 'resubmit' ? 'Ask again' : 'Turn down'}
+          destructive={decision === 'rejected'}
+          reasonPlaceholder={
+            decision === 'approved'
+              ? 'e.g. Licence and passport both checked against the selfie — all three match.'
+              : 'e.g. Licence photo is cut off at the expiry date.'
+          }
+          change={{
+            subjectLabel: `${fullName} · ${user.email}`,
+            field: 'Identity',
+            before: VERIFICATION_STYLE[user.verification.status].label,
+            after:
+              decision === 'approved' ? 'Verified' : decision === 'resubmit' ? 'Asked again' : 'Turned down',
+          }}
+          customerNote={
+            decision === 'approved'
+              ? undefined
+              : {
+                  label: 'What to tell them',
+                  required: true,
+                  hint: 'They see this and nothing else. Say what was wrong and what to do about it.',
+                }
+          }
+          onConfirm={async (reason, { customerNote }) => {
+            await apiClient.decideUserVerification(user.id, decision, reason, customerNote);
+            setDecision(null);
+            refresh();
+          }}
+        />
+      ) : null}
 
       <ReasonDialog
         open={dialogOpen}

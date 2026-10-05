@@ -97,6 +97,23 @@ export type ReasonDialogProps = {
     hint?: string;
   };
 
+  // ---- A LINE THE PERSON ON THE OTHER END WILL READ ----
+  // Kept apart from the reason, and that separation is the whole point. The
+  // reason is for the audit log and can be internal — "third request this month,
+  // approved under the 48-hour rule". This is the sentence the customer reads:
+  // why their refund was refused, or what was wrong with their licence photo.
+  // Writing one sentence to serve both audiences produces either a log entry that
+  // explains nothing or a message that should never have been sent.
+  //
+  // Like the amount below, one named thing rather than a slot for anything.
+  customerNote?: {
+    label: string;
+    hint?: string;
+    // Some decisions are unkind without one. A refusal with no explanation makes
+    // somebody ring up to ask what to do instead.
+    required?: boolean;
+  };
+
   // ---- YOUR AUTHENTICATOR CODE, FOR THE CHANGES THAT DECIDE WHO GETS IN ----
   // Adding a member of staff, resetting one, taking one's access away. A session
   // left open on somebody's desk is enough to approve a refund; it is
@@ -108,7 +125,10 @@ export type ReasonDialogProps = {
   // What actually performs the change. Called only once the reason — and the
   // amount or the code, when they are asked for — passes. If it throws, the
   // dialog stays open with everything still typed, and says what went wrong.
-  onConfirm: (reason: string, extras: { amount?: number; code?: string }) => Promise<void> | void;
+  onConfirm: (
+    reason: string,
+    extras: { amount?: number; code?: string; customerNote?: string },
+  ) => Promise<void> | void;
 };
 
 export function ReasonDialog({
@@ -121,6 +141,7 @@ export function ReasonDialog({
   reasonPlaceholder = 'Why are you making this change?',
   change,
   amount,
+  customerNote,
   confirmWithCode = false,
   onConfirm,
 }: ReasonDialogProps) {
@@ -128,6 +149,7 @@ export function ReasonDialog({
 
   const [reason, setReason] = useState('');
   const [amountText, setAmountText] = useState('');
+  const [note, setNote] = useState('');
   const [code, setCode] = useState('');
   const [touched, setTouched] = useState(false);
   const [working, setWorking] = useState(false);
@@ -188,8 +210,19 @@ export function ReasonDialog({
   // the method of the request, whatever this panel does. See lib/tiers.ts.
   const { whyNoChanges } = useAdminSession();
 
+  // A note that is asked for and required has to actually say something. Five
+  // characters is not a sentence to send somebody.
+  const noteProblem =
+    !customerNote?.required || note.trim().length >= 5
+      ? undefined
+      : 'Write the line this person will read — it is the only explanation they get.';
+
   const blocked =
-    whyNoChanges !== undefined || tooShort || amountProblem !== undefined || codeProblem !== undefined;
+    whyNoChanges !== undefined ||
+    tooShort ||
+    amountProblem !== undefined ||
+    noteProblem !== undefined ||
+    codeProblem !== undefined;
 
   const submit = async () => {
     setTouched(true);
@@ -199,8 +232,9 @@ export function ReasonDialog({
     setProblem(undefined);
 
     // Only what was asked for goes back to the screen.
-    const extras: { amount?: number; code?: string } = {};
+    const extras: { amount?: number; code?: string; customerNote?: string } = {};
     if (amount) extras.amount = parsedAmount;
+    if (customerNote && note.trim() !== '') extras.customerNote = note.trim();
     if (confirmWithCode) extras.code = code;
 
     try {
@@ -337,6 +371,29 @@ export function ReasonDialog({
               : 'Recorded in the audit log against your name. Write it for whoever reads it next year.'
           }
         />
+
+        {/* ---- WHAT THE OTHER PERSON READS ----
+            After the reason, on purpose: the reason is why this is being done,
+            and this is how it is explained to whoever it happens to. Somebody
+            writing them in this order is less likely to send the first one by
+            mistake. */}
+        {customerNote ? (
+          <TextArea
+            label={customerNote.label}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            onBlur={() => setTouched(true)}
+            rows={3}
+            maxLength={500}
+            showCount
+            required={customerNote.required}
+            error={touched ? noteProblem : undefined}
+            hint={
+              customerNote.hint ??
+              'Sent to them as written. Not in the audit log — the reason above is what is recorded.'
+            }
+          />
+        ) : null}
 
         {confirmWithCode ? (
           <Input

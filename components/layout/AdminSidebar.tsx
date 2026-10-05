@@ -43,6 +43,10 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: '/', label: 'Dashboard', icon: 'grid-outline' },
       { href: '/queue', label: 'Action Queue', icon: 'flash-outline', badge: true },
+      // What customers and businesses have been doing, as opposed to what we
+      // have to do about it. Beside the queue because the two answer the two
+      // halves of "what is going on".
+      { href: '/activity', label: 'Activity', icon: 'time-outline' },
       { href: '/analytics', label: 'Analytics', icon: 'bar-chart-outline' },
     ],
   },
@@ -59,6 +63,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: '/bookings', label: 'Bookings', icon: 'calendar-outline' },
       { href: '/disputes', label: 'Disputes', icon: 'alert-circle-outline' },
+      { href: '/support', label: 'Messages', icon: 'chatbubble-outline' },
       // Work a business asked us to do for it, rather than a record to change.
       // Sits in Operations because that is what it is: a job queue.
       { href: '/fleet-requests', label: 'Fleet Set-up', icon: 'documents-outline' },

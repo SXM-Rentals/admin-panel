@@ -338,6 +338,16 @@ export const backendRoutes: { group: string; purpose: string }[] = [
   },
   { group: 'POST /admin/providers/:id/verification', purpose: 'The SXM Verified decision, with a reason' },
 
+  // ---- MESSAGES AND IDENTITY ----
+  { group: 'GET /admin/support', purpose: 'Customers waiting for an answer, oldest wait first' },
+  { group: 'GET /admin/support/:id', purpose: 'One customer\u2019s whole conversation' },
+  { group: 'POST /admin/support/:id/messages', purpose: 'Answering them. No reason: it is correspondence, not a change' },
+  {
+    group: 'POST /admin/users/:id/verification',
+    purpose: 'Approving, refusing or asking again for somebody\u2019s identity papers, with a reason',
+  },
+  { group: 'GET /admin/bookings/:id/agreement', purpose: 'The rental agreement and the signature drawn on it' },
+
   // ---- A BUSINESS ASKING US TO SET ITS FLEET UP ----
   { group: 'GET /admin/fleet-requests', purpose: 'Businesses that sent us their records to put on for them' },
   { group: 'GET /admin/fleet-requests/:id', purpose: 'One request, with the files they sent listed' },
@@ -375,6 +385,5 @@ export const notOnTheServerYet: string[] = [
   'Promotional codes',
   'The rewards programme — tiers and point values',
   'Platform settings, including the commission rate',
-  'Reading the messages on a booking',
   'A rental business\u2019s own documents and payout account',
 ];
