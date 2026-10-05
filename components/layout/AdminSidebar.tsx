@@ -21,6 +21,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cx } from '@/lib/utils';
+import { useAdminSession } from '@/lib/auth';
 import { Icon, Logo, Text } from '@/components/ui';
 import type { IconName } from '@/components/ui';
 import styles from './shell.module.css';
@@ -31,6 +32,10 @@ type NavItem = {
   icon: IconName;
   // Only Action Queue has one. Everything else would be noise.
   badge?: boolean;
+  // Shown to one account. Not greyed for everybody else, as a tier-gated action
+  // is elsewhere in the panel: a list of ways to destroy the platform's records
+  // is not something to dangle in front of people who may not use it.
+  godfatherOnly?: boolean;
 };
 
 const GROUPS: { title: string; items: NavItem[] }[] = [
@@ -89,11 +94,14 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: '/audit', label: 'Audit Log', icon: 'documents-outline' },
       { href: '/settings', label: 'Settings', icon: 'settings-outline' },
       { href: '/playbook', label: 'Playbook', icon: 'library-outline' },
+      { href: '/test-data', label: 'Test Data', icon: 'construct-outline', godfatherOnly: true },
     ],
   },
 ];
 
 export function AdminSidebar({ queueCount }: { queueCount: number }) {
+  const { staff: me } = useAdminSession();
+  const maySeeTestData = me?.tier === 'godfather';
   const pathname = usePathname();
 
   // "/" is the dashboard itself, so it only counts as current on an exact match
@@ -122,7 +130,7 @@ export function AdminSidebar({ queueCount }: { queueCount: number }) {
               {group.title}
             </Text>
 
-            {group.items.map((item) => {
+            {group.items.filter((item) => !item.godfatherOnly || maySeeTestData).map((item) => {
               const active = isActive(item.href);
               return (
                 <Link

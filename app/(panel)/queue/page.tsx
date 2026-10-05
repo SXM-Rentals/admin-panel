@@ -17,9 +17,12 @@
 // working, and the thing that has been waiting longest is the thing closest to
 // becoming a complaint. It goes first.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
+import { publishQueueCount } from '@/lib/queue-count';
+import { isWithin, periodLabel, type Period } from '@/lib/period';
+import { PeriodPicker } from '@/components/admin/PeriodPicker';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { relativeDay } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
@@ -63,12 +66,22 @@ const URGENCY: Record<QueueItem['urgency'], { tone: 'neutral' | 'warning' | 'dan
 
 export default function ActionQueuePage() {
   const [kind, setKind] = useState<KindFilter>('all');
+  // Everything, to begin with: this screen is a list of work, and hiding work by
+  // default is how something waits a fortnight.
+  const [period, setPeriod] = useState<Period>({ id: 'all' });
   const { data: queue, loading, error, refresh } = useAsyncData(() => apiClient.getActionQueue(), []);
 
   const items = queue ?? [];
-  const visible = kind === 'all' ? items : items.filter((item) => item.kind === kind);
+  const inPeriod = items.filter((item) => isWithin(period, item.waitingSince));
+  const visible = kind === 'all' ? inPeriod : inPeriod.filter((item) => item.kind === kind);
 
-  const count = (k: QueueItem['kind']) => items.filter((item) => item.kind === k).length;
+  // THE BADGE COUNTS EVERYTHING WAITING, not what this screen is showing. A
+  // filter is somebody looking at part of the work, not the work going away.
+  useEffect(() => {
+    if (!loading && !error) publishQueueCount(items.length);
+  }, [items.length, loading, error]);
+
+  const count = (k: QueueItem['kind']) => inPeriod.filter((item) => item.kind === k).length;
 
   // A queue that could not be fetched is not an empty queue. See LoadFailed.
   if (error) return <LoadFailed title="Action Queue" what="The queue" error={error} onRetry={refresh} />;
@@ -90,6 +103,7 @@ export default function ActionQueuePage() {
         flush
       >
         <FilterBar>
+          <PeriodPicker value={period} onChange={setPeriod} label="Waiting since" />
           <FilterChips
             label="Show"
             value={kind}

@@ -24,6 +24,7 @@ import React, { useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, shortDate } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -291,6 +292,16 @@ export default function DepositsLedgerPage() {
           refresh();
         }}
       />
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="the deposits"
+            detail="Every deposit held, released and claimed. The bookings stay."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

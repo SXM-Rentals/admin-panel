@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, shortDate } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -189,6 +190,16 @@ export default function UsersPage() {
         Closed accounts stay in this list, dimmed, so the audit log still has something to point
         at.
       </Text>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="what customers have spent"
+            detail="Lifetime spend, points and booking counts go back to nothing. The accounts themselves stay."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

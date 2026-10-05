@@ -20,6 +20,7 @@ import React, { useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, stamp } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -212,6 +213,16 @@ export default function PaymentsPage() {
         the platform earns nothing from it, and it is owed back in full. It has its own ledger
         under Deposits.
       </Note>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="the payments ledger"
+            detail="Every charge, refund, payout and commission line. Bookings and deposits stay."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

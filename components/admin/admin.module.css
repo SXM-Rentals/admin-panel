@@ -869,3 +869,49 @@
   max-height: 160px;
   color: var(--ink);
 }
+
+/* ---- WHICH STRETCH OF TIME A SCREEN IS SHOWING ----
+   Sits in the filter row beside the other chips. */
+.periodRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.periodDates {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-left: var(--space-sm);
+}
+
+.periodDate {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* ---- CLEARING TEST RECORDS ----
+   Only the Godfather ever sees one of these. Deliberately plain: a row, not a
+   panel of warnings, because a card of four of them should read as a list of
+   choices rather than as four alarms. */
+.resetRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.resetRow:last-of-type {
+  border-bottom: none;
+}
+
+.resetText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}

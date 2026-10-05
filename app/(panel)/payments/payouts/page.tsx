@@ -34,6 +34,7 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { useAdminSession } from '@/lib/auth';
 import { dateRange, longDate, money } from '@/lib/format';
 import { whyNeedsTier } from '@/lib/tiers';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { CellStack, DataTable, type Column } from '@/components/tables/DataTable';
@@ -269,6 +270,16 @@ export default function PayoutsPage() {
           }}
         />
       ) : null}
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="the payouts"
+            detail="What businesses were owed and what was sent. The bookings behind them stay."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

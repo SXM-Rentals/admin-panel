@@ -21,6 +21,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, relativeDay, shortDate } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -248,6 +249,16 @@ function BookingsList() {
         The Gross column is what the customer paid. The deposit beside it is not part of that
         figure — it is held against their card and given back.
       </Note>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="the bookings"
+            detail="Every booking and its history. Payments, payouts and deposits stay."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

@@ -29,6 +29,7 @@ import { apiClient } from '@/lib/api-client';
 import { bucketFor, bucketNames } from '@/lib/analytics';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, longDate } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { StatGrid, StatTile } from '@/components/admin/StatTile';
@@ -51,6 +52,12 @@ function today(): string {
 // The quick ranges, in days back from today. Named for what somebody would
 // actually ask for rather than for a number of months.
 const QUICK_RANGES: { id: string; label: string; days: number }[] = [
+  // DAY BY DAY, which the chart could always draw and nothing ever asked for.
+  // The server groups the bars to suit the span, so a short range is daily bars;
+  // the chart says which grouping it used underneath itself.
+  { id: '1d', label: 'Today', days: 1 },
+  { id: '7d', label: 'Last 7 Days', days: 7 },
+  { id: '14d', label: 'Last 14 Days', days: 14 },
   { id: '30d', label: 'Last 30 Days', days: 30 },
   { id: '90d', label: 'Last 90 Days', days: 90 },
   { id: '6m', label: 'Last 6 Months', days: 182 },
@@ -280,6 +287,15 @@ export default function AnalyticsPage() {
         different scales — and lines drawn against different scales cross wherever the scales
         make them cross, which looks like a finding and is not one.
       </Note>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records" subtitle="These charts are drawn from these records">
+          <ResetControl what="the bookings" detail="Empties the bookings chart, and the revenue with it." />
+          <ResetControl what="the payments ledger" detail="Empties the revenue chart. The bookings stay on theirs." />
+          <ResetControl what="what customers have spent" detail="Empties new-customer figures and lifetime spend." />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

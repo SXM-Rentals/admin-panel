@@ -38,6 +38,9 @@ import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { clockTime, longDate, money, relativeDay } from '@/lib/format';
+import { isWithin, periodLabel, type Period } from '@/lib/period';
+import { PeriodPicker } from '@/components/admin/PeriodPicker';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
@@ -89,6 +92,10 @@ const BY: Record<'customer' | 'provider' | 'staff', string> = {
 
 export default function ActivityPage() {
   const [which, setWhich] = useState<Which>('all');
+  // Everything to begin with. This screen answers "what has been going on", and
+  // the honest first answer is all of it — a default of "today" on a quiet
+  // Tuesday would look like a platform where nothing happens.
+  const [period, setPeriod] = useState<Period>({ id: 'all' });
 
   const bookings = useAsyncData(() => apiClient.listBookings(), []);
   const ledger = useAsyncData(() => apiClient.getLedger(), []);
@@ -177,7 +184,9 @@ export default function ActivityPage() {
     return out.sort((a, b) => b.at.localeCompare(a.at));
   }, [bookings.data, ledger.data, vehicles.data]);
 
-  const shown = events.filter((event) => {
+  const inPeriod = events.filter((event) => isWithin(period, event.at));
+
+  const shown = inPeriod.filter((event) => {
     if (which === 'all') return true;
     if (which === 'money') return event.what.startsWith('money');
     if (which === 'cars') return event.what.startsWith('car');
@@ -217,18 +226,19 @@ export default function ActivityPage() {
 
       <PageCard
         title="Lately"
-        subtitle={loading ? undefined : `${todayCount} today · ${shown.length} shown`}
+        subtitle={loading ? undefined : `${todayCount} today · ${shown.length} shown for ${periodLabel(period)}`}
       >
         <FilterBar>
+          <PeriodPicker value={period} onChange={setPeriod} label="When" />
           <FilterChips
             label="Show"
             value={which}
             onChange={setWhich}
             options={[
-              { value: 'all', label: 'Everything', count: events.length },
-              { value: 'bookings', label: 'Bookings', count: events.filter((e) => e.what.startsWith('booking')).length },
-              { value: 'cars', label: 'Cars', count: events.filter((e) => e.what.startsWith('car')).length },
-              { value: 'money', label: 'Money', count: events.filter((e) => e.what.startsWith('money')).length },
+              { value: 'all', label: 'Everything', count: inPeriod.length },
+              { value: 'bookings', label: 'Bookings', count: inPeriod.filter((e) => e.what.startsWith('booking')).length },
+              { value: 'cars', label: 'Cars', count: inPeriod.filter((e) => e.what.startsWith('car')).length },
+              { value: 'money', label: 'Money', count: inPeriod.filter((e) => e.what.startsWith('money')).length },
             ]}
           />
         </FilterBar>
@@ -236,7 +246,11 @@ export default function ActivityPage() {
         {loading ? (
           <Skeleton height={320} />
         ) : shown.length === 0 ? (
-          <Note>Nothing yet. Bookings and payments appear here as they happen.</Note>
+          <Note>
+            {events.length === 0
+              ? 'Nothing yet. Bookings, cars and payments appear here as they happen.'
+              : `Nothing in ${periodLabel(period)}. There is older activity — widen the dates above.`}
+          </Note>
         ) : (
           <div className={styles.timeline}>
             {shown.map((event) => {
@@ -277,6 +291,8 @@ export default function ActivityPage() {
         )}
       </PageCard>
 
+      <ResetSection />
+
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <Note icon="warning-outline" tone="ink2">
           Built here from the bookings, the vehicles and the payments ledger rather than read from
@@ -287,5 +303,22 @@ export default function ActivityPage() {
         </Note>
       </div>
     </>
+  );
+}
+
+// ---- CLEARING WHAT THIS SCREEN IS BUILT FROM ----
+// Only the Godfather sees any of this; see ResetControl. Each row is on its own
+// on purpose — clearing the bookings while keeping the takings is exactly the
+// case this is for.
+function ResetSection() {
+  return (
+    <div style={{ marginTop: 'var(--space-lg)' }}>
+      <PageCard title="Test Records" subtitle="Clearing one does not touch the others">
+        <ResetControl what="the bookings" detail="Every booking and its history. Payments and payouts stay." />
+        <ResetControl what="the payments" detail="Charges, refunds and commission. The bookings stay." />
+        <ResetControl what="the cars" detail="Every vehicle a business has added, and its listing decisions." />
+        <ResetNote />
+      </PageCard>
+    </div>
   );
 }

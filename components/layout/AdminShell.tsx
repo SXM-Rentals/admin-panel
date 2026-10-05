@@ -20,9 +20,10 @@
 // half-working phone layout would be a worse answer than an honest one.
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAdminSession } from '@/lib/auth';
 import { apiClient } from '@/lib/api-client';
+import { onQueueCount } from '@/lib/queue-count';
 import { AppErrorBoundary, Logo, Text } from '@/components/ui';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminTopBar, type SearchIndex } from './AdminTopBar';
@@ -39,6 +40,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const waking = useServerWaking();
 
   const [queueCount, setQueueCount] = useState(0);
+  // Which screen is open. The badge is fetched again on every move, because it
+  // was fetched once at sign-in and never again — so dealing with the last thing
+  // in the queue left a red 1 on the sidebar beside a screen saying "nothing is
+  // waiting". A wrong number is worse than none.
+  const here = usePathname();
   const [index, setIndex] = useState<SearchIndex>(EMPTY_INDEX);
 
   // Send anybody without a session to the sign-in screen.
@@ -79,6 +85,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         if (!cancelled) setQueueCount(0);
       });
 
+    // And the queue screen itself says so the moment it has the list, so the
+    // badge is right while somebody is looking straight at the thing it counts.
+    const stopListening = onQueueCount((count) => {
+      if (!cancelled) setQueueCount(count);
+    });
+
     Promise.allSettled([
       apiClient.listUsers(),
       apiClient.listProviders(),
@@ -98,8 +110,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      stopListening();
     };
-  }, [isSignedIn, mustChangePassword]);
+  }, [isSignedIn, mustChangePassword, here]);
 
   // The server could not be reached, so we genuinely do not know who this is.
   // Said plainly, with a way to try again.
