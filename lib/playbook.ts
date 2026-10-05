@@ -338,6 +338,13 @@ export const backendRoutes: { group: string; purpose: string }[] = [
   },
   { group: 'POST /admin/providers/:id/verification', purpose: 'The SXM Verified decision, with a reason' },
 
+  // ---- CLEARING TEST RECORDS, BEFORE THE PLATFORM IS REAL ----
+  { group: 'GET /admin/test-data/status', purpose: 'Whether test records can still be cleared, and what is keeping it so' },
+  {
+    group: 'POST /admin/test-data/clear',
+    purpose: 'Clearing one kind of test record. Godfather only, with a reason and your code',
+  },
+
   // ---- MESSAGES AND IDENTITY ----
   { group: 'GET /admin/support', purpose: 'Customers waiting for an answer, oldest wait first' },
   { group: 'GET /admin/support/:id', purpose: 'One customer\u2019s whole conversation' },

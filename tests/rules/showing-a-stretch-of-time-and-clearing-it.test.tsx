@@ -19,12 +19,13 @@
 // this panel leaves something behind to read. This one leaves nothing.
 
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '../render';
-import { serve } from '../fake-server';
+import { render, screen, waitFor, within } from '../render';
+import { reply, sentTo, serve } from '../fake-server';
 import { isWithin, localDay, periodFor } from '@/lib/period';
 import { onQueueCount } from '@/lib/queue-count';
+import { forgetTestDataStatus } from '@/lib/test-data';
 import ActionQueuePage from '@/app/(panel)/queue/page';
 import ActivityPage from '@/app/(panel)/activity/page';
 import TestDataPage from '@/app/(panel)/test-data/page';
@@ -35,6 +36,11 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   useParams: () => ({}),
 }));
+
+// Whether the test-data window is open is asked once and kept for the whole
+// panel, so each test starts with it forgotten — otherwise the first test to ask
+// decides the answer for all the others.
+beforeEach(() => forgetTestDataStatus());
 
 const me = (tier: string) => ({
   id: 'st-me',
@@ -213,22 +219,46 @@ describe('showing one stretch of time', () => {
   });
 });
 
+const OPEN = {
+  open: true,
+  conditions: [
+    { name: 'allow_test_reset', met: true, sentence: 'ALLOW_TEST_RESET is switched on.' },
+    { name: 'stripe_never_live', met: true, sentence: 'Stripe has never run with live keys.' },
+  ],
+};
+
+const SHUT = {
+  open: false,
+  conditions: [
+    { name: 'allow_test_reset', met: true, sentence: 'ALLOW_TEST_RESET is switched on.' },
+    { name: 'stripe_never_live', met: false, sentence: 'Stripe has run with live keys, so this is shut for good.' },
+  ],
+};
+
 describe('clearing test records', () => {
   it('is offered to the Godfather and to nobody else', async () => {
-    serve({ '/admin/me': me('godfather'), 'GET /admin/bookings': [], 'GET /admin/payments': [], 'GET /admin/vehicles': [] });
+    serve({
+      '/admin/me': me('godfather'),
+      '/admin/test-data/status': OPEN,
+      'GET /admin/bookings': [],
+      'GET /admin/payments': [],
+      'GET /admin/vehicles': [],
+    });
     render(<ActivityPage />);
 
-    // Offered, and plainly not working yet — rather than hidden, or a button
-    // that quietly fails.
     const clear = await screen.findAllByRole('button', { name: /^clear$/i });
     expect(clear.length).toBeGreaterThan(0);
-    expect(clear[0]).toBeDisabled();
-    expect(clear[0]).toHaveAttribute('title', expect.stringMatching(/does not offer this yet/i));
-    expect(screen.getByText(/not something the server offers yet/i)).toBeInTheDocument();
+    await waitFor(() => expect(clear[0]).toBeEnabled());
   });
 
   it('is not on the screen at all for an Owner', async () => {
-    serve({ '/admin/me': me('owner'), 'GET /admin/bookings': [], 'GET /admin/payments': [], 'GET /admin/vehicles': [] });
+    serve({
+      '/admin/me': me('owner'),
+      '/admin/test-data/status': OPEN,
+      'GET /admin/bookings': [],
+      'GET /admin/payments': [],
+      'GET /admin/vehicles': [],
+    });
     render(<ActivityPage />);
 
     await screen.findByText(/Activity/);
@@ -236,18 +266,87 @@ describe('clearing test records', () => {
   });
 
   it('turns an Owner away from the Test Data screen outright', async () => {
-    serve({ '/admin/me': me('owner') });
+    serve({ '/admin/me': me('owner'), '/admin/test-data/status': OPEN });
     render(<TestDataPage />);
 
     expect(await screen.findByText(/Only the Godfather/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /wind back/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^clear$/i })).not.toBeInTheDocument();
   });
 
-  it('warns the Godfather that winding back undoes what was right too', async () => {
-    serve({ '/admin/me': me('godfather') });
+  it('sends the kind, the reason and the code, and says what the server did', async () => {
+    const user = userEvent.setup();
+    const server = serve({
+      '/admin/me': me('godfather'),
+      '/admin/test-data/status': OPEN,
+      'POST /admin/test-data/clear': {
+        what: 'deposits',
+        cleared: 12,
+        detail: '12 deposits cleared. Bookings untouched.',
+      },
+    });
     render(<TestDataPage />);
 
-    expect(await screen.findByText(/undoes the things that were right/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /wind back/i })).toBeDisabled();
+    await user.click((await screen.findAllByRole('button', { name: /^clear$/i }))[0]);
+    await waitFor(() => expect(document.activeElement?.tagName).toMatch(/^(INPUT|TEXTAREA)$/));
+    await user.click(screen.getByLabelText(/reason/i));
+    await user.paste('Finished testing the booking flow; starting the pre-launch run clean.');
+    await user.type(screen.getByLabelText(/authenticator code/i), '246810');
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /clear the deposits/i }));
+
+    await waitFor(() =>
+      expect(sentTo(server, 'POST', '/admin/test-data/clear')).toEqual({
+        what: 'deposits',
+        reason: 'Finished testing the booking flow; starting the pre-launch run clean.',
+        code: '246810',
+      }),
+    );
+
+    // The server's own account of what it did, as written — not "done".
+    expect(await screen.findByText('12 deposits cleared. Bookings untouched.')).toBeInTheDocument();
+  });
+
+  it('shows the server own refusal when one would take more with it', async () => {
+    const user = userEvent.setup();
+    serve({
+      '/admin/me': me('godfather'),
+      '/admin/test-data/status': OPEN,
+      'POST /admin/test-data/clear': reply(409, {
+        error: {
+          code: 'would_take_more',
+          message: 'Clearing the bookings would take the deposits with them. Clear the deposits first.',
+          requestId: 'r1',
+        },
+      }),
+    });
+    render(<TestDataPage />);
+
+    await user.click((await screen.findAllByRole('button', { name: /^clear$/i }))[0]);
+    await waitFor(() => expect(document.activeElement?.tagName).toMatch(/^(INPUT|TEXTAREA)$/));
+    await user.click(screen.getByLabelText(/reason/i));
+    await user.paste('Clearing up after the pre-launch run.');
+    await user.type(screen.getByLabelText(/authenticator code/i), '246810');
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /clear the deposits/i }));
+
+    // Word for word: that sentence is the one that says what to do next.
+    expect(await screen.findByText(/Clear the deposits first/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing was changed/i)).toBeInTheDocument();
+  });
+
+  it('shuts for good, and says which condition shut it', async () => {
+    serve({ '/admin/me': me('godfather'), '/admin/test-data/status': SHUT });
+    render(<TestDataPage />);
+
+    expect(
+      await screen.findByText(/Stripe has run with live keys, so this is shut for good/),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /^clear$/i })[0]).toBeDisabled());
+  });
+
+  it('never offers to clear the refunds, because they are not a kind of their own', async () => {
+    serve({ '/admin/me': me('godfather'), '/admin/test-data/status': OPEN });
+    render(<TestDataPage />);
+
+    await screen.findAllByRole('button', { name: /^clear$/i });
+    expect(screen.queryByText(/clear the refund/i)).not.toBeInTheDocument();
   });
 });

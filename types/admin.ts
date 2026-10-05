@@ -555,6 +555,38 @@ export type FleetRequestFile = {
   size: number;
 };
 
+// ---- CLEARING TEST RECORDS BEFORE THE PLATFORM IS REAL ----
+// The seven kinds of record that can be cleared, and nothing else. Some screens
+// show records with no kind of their own — refund requests go when the bookings
+// go, and a customer's points are part of what they have spent — so those screens
+// say so rather than offering a button that means something subtly different.
+export type TestDataWhat =
+  | 'bookings'
+  | 'payments'
+  | 'payouts'
+  | 'deposits'
+  | 'vehicles'
+  | 'providers'
+  | 'customer_spend';
+
+// WHETHER ANY OF IT IS STILL POSSIBLE, and what is keeping it so. The window is
+// open only while it is switched on AND Stripe has never run live; once live keys
+// are used it shuts for good. The sentences are the server's own and are printed
+// as written, because the exact condition is the thing somebody needs to know and
+// paraphrasing it here would make two versions of one fact.
+export type TestDataStatus = {
+  open: boolean;
+  conditions: { name: string; met: boolean; sentence: string }[];
+};
+
+export type TestDataCleared = {
+  what: TestDataWhat;
+  // How many rows went.
+  cleared: number;
+  // What the server says it did, shown to the person as written.
+  detail: string;
+};
+
 // ---- THE PLAYBOOK ----
 // What the platform is built out of, held as data so the page stays a list to
 // maintain rather than becoming a wall of hand-written mark-up.

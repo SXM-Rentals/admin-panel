@@ -314,9 +314,21 @@ function ResetSection() {
   return (
     <div style={{ marginTop: 'var(--space-lg)' }}>
       <PageCard title="Test Records" subtitle="Clearing one does not touch the others">
-        <ResetControl what="the bookings" detail="Every booking and its history. Payments and payouts stay." />
-        <ResetControl what="the payments" detail="Charges, refunds and commission. The bookings stay." />
-        <ResetControl what="the cars" detail="Every vehicle a business has added, and its listing decisions." />
+        <ResetControl
+          what="bookings"
+          label="the bookings"
+          detail="Every booking and its history. Payments and payouts stay. Clear the deposits first."
+        />
+        <ResetControl
+          what="payments"
+          label="the payments ledger"
+          detail="Charges, refunds and commission. The bookings stay, and this can go at any point."
+        />
+        <ResetControl
+          what="vehicles"
+          label="the cars"
+          detail="Every vehicle a business has added, with its listing decisions. The businesses stay."
+        />
         <ResetNote />
       </PageCard>
     </div>

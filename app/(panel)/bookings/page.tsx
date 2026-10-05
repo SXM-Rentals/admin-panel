@@ -253,8 +253,9 @@ function BookingsList() {
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <PageCard title="Test Records">
           <ResetControl
-            what="the bookings"
-            detail="Every booking and its history. Payments, payouts and deposits stay."
+            what="bookings"
+            label="the bookings"
+            detail="Every booking and its history, and the refund requests that belong to them. Payments, payouts and deposits stay. Clear the deposits first."
           />
           <ResetNote />
         </PageCard>

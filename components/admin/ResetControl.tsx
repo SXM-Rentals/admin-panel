@@ -3,93 +3,163 @@
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
 // WHAT THIS FILE DOES: The control that clears one kind of test record — the
-// bookings, the payouts, somebody's lifetime spend — so the platform can be tried
-// out properly before it carries real customers, and started again afterwards.
+// bookings, the payouts, what customers have spent — so the platform can be tried
+// out properly before it carries real customers.
 //
-// THE GODFATHER AND NOBODY ELSE. Not Owners, who can do everything else including
-// paying businesses. This is the one capability in the panel kept to a single
-// account, because it is the only one that destroys records rather than changing
-// them: every other mistake here leaves something behind to read, and this leaves
-// nothing. The server will check it again — the panel is not what keeps anybody
-// out — but a button nobody else can even see is the right starting point.
+// THE GODFATHER AND NOBODY ELSE, and hidden rather than greyed for everybody else.
+// Not Owners, who can do everything else in this panel including paying businesses.
+// This is the only capability here that destroys records rather than changing them:
+// every other mistake leaves something behind to read, and this leaves nothing.
+// Elsewhere the panel greys an action somebody may not take and says why, because
+// knowing it exists is useful. "Ask the Godfather to wipe the bookings" is not a
+// workflow, so there is nothing useful to say and the row simply is not there.
 //
-// EACH CARD ON ITS OWN, WHICH IS THE WHOLE DESIGN. Clearing the bookings must not
-// touch the takings, and clearing the takings must not touch who signed up. One
-// "reset everything" button is a different and much more dangerous thing, and it
-// is deliberately not what this is.
+// EACH ONE ON ITS OWN, WHICH IS THE WHOLE DESIGN. Clearing the bookings must not
+// take the takings with it. Where the server cannot honour that it refuses with
+// `would_take_more` and names what to clear first — and that sentence reaches the
+// person word for word, because it is the one that tells them what to do next.
 //
-// WHAT IT DOES TODAY: nothing, and it says so. The SXM Rentals server has no
-// address for clearing records, so the control is drawn, greyed, naming what it
-// would clear and where the backend work is written down. That is the same way
-// this panel has treated every not-yet-built capability, and it beats both hiding
-// it and shipping a button that quietly 404s.
-//
-// WHEN IT IS BUILT it needs the full ceremony: a written reason, the
-// authenticator code, and the server refusing it outright once real customers
-// exist. See SXM_RENTALS_TEST_RESET_HANDOFF.md.
+// IT CLOSES FOR GOOD, AND THE SCREEN SAYS WHEN. The server only allows any of this
+// while it is switched on AND Stripe has never run live; the moment live keys are
+// used it is shut permanently. The conditions come back from the server in its own
+// sentences and are printed as written on the Test Data screen, so nobody has to
+// guess what is keeping the window open.
 
-import React from 'react';
+import React, { useState } from 'react';
+import { apiClient } from '@/lib/api-client';
+import { useAsyncData } from '@/hooks/useAsyncData';
 import { useAdminSession } from '@/lib/auth';
 import { whyNeedsTier } from '@/lib/tiers';
+import { forgetTestDataStatus, testDataStatus } from '@/lib/test-data';
+import { ReasonDialog } from '@/components/admin/ReasonDialog';
 import { Note } from '@/components/admin/shared';
 import { Button, Text } from '@/components/ui';
+import type { TestDataWhat } from '@/types';
 import styles from './admin.module.css';
 
 export function ResetControl({
   what,
+  label,
   detail,
 }: {
-  // What would be cleared, in the words somebody would use for it: "the
-  // bookings", "this month's takings".
-  what: string;
-  // The consequence, in one line. Written for somebody about to press it.
+  // Exactly what the server will be asked to clear. Only these seven exist; a
+  // screen whose records have no `what` of their own does not get one of these.
+  what: TestDataWhat;
+  // What it is called in this office: "the bookings", "what customers have spent".
+  label: string;
+  // The consequence, in one line, written for somebody about to press it.
   detail: string;
 }) {
   const { staff: me } = useAdminSession();
+  const mine = whyNeedsTier(me?.tier, 'godfather') === undefined;
 
-  // Not yours to see, not yours to know about: for everybody else this is simply
-  // not part of the screen. Unlike the tier rules elsewhere in the panel, which
-  // grey an action and say why, there is nothing useful to tell an Owner here —
-  // "ask the Godfather to wipe the bookings" is not a workflow.
-  if (whyNeedsTier(me?.tier, 'godfather') !== undefined) return null;
+  // Asked once for the whole panel; see lib/test-data.ts.
+  const { data: status, refresh } = useAsyncData(
+    () => (mine ? testDataStatus() : Promise.resolve(undefined)),
+    [mine],
+  );
+
+  const [asking, setAsking] = useState(false);
+  // What the server said it did, kept until the screen is left. "Cleared 412
+  // bookings" is the only confirmation there will ever be.
+  const [done, setDone] = useState<string | undefined>(undefined);
+
+  if (!mine) return null;
+
+  const shut = status !== undefined && !status.open;
 
   return (
-    <div className={styles.resetRow}>
-      <span className={styles.resetText}>
-        <Text variant="small" tone="ink2" as="span" raw>
-          Clear {what}
-        </Text>
-        <Text variant="caption" tone="ink3" as="p" raw>
-          {detail}
-        </Text>
-      </span>
+    <>
+      <div className={styles.resetRow}>
+        <span className={styles.resetText}>
+          <Text variant="small" tone="ink2" as="span" raw>
+            Clear {label}
+          </Text>
+          <Text variant="caption" tone="ink3" as="p" raw>
+            {done ?? detail}
+          </Text>
+        </span>
 
-      {/* Drawn and dead, on purpose. See the note at the top of this file. */}
-      <Button
-        label="Clear"
-        variant="danger"
-        size="sm"
-        disabled
-        title="The SXM Rentals server does not offer this yet."
+        <Button
+          label="Clear"
+          variant="danger"
+          size="sm"
+          disabled={shut}
+          title={shut ? 'Clearing test records is closed for good on this platform.' : undefined}
+          onClick={() => setAsking(true)}
+        />
+      </div>
+
+      <ReasonDialog
+        open={asking}
+        onClose={() => setAsking(false)}
+        title={`Clear ${label}`}
+        description={`${detail} This destroys those records rather than hiding them, and there is no undoing it from the panel. Everything else stays, including the audit log — this very clearance appears in it under your name.`}
+        confirmLabel={`Clear ${label}`}
+        destructive
+        confirmWithCode
+        reasonPlaceholder="e.g. Finished testing the booking flow end to end; starting the pre-launch run clean."
+        change={{
+          subjectLabel: 'SXM Rentals · test records',
+          field: label,
+          before: 'On the platform',
+          after: 'Gone',
+        }}
+        onConfirm={async (reason, { code }) => {
+          try {
+            const result = await apiClient.clearTestData(what, reason, code ?? '');
+            // The server's own sentence about what it did, shown as written.
+            setDone(result.detail);
+            setAsking(false);
+          } finally {
+            // Whether it went through or was refused, what is possible next may
+            // have changed — and a refusal may be the window having shut since
+            // this screen was opened.
+            forgetTestDataStatus();
+            refresh();
+          }
+        }}
       />
-    </div>
+    </>
   );
 }
 
-// The line that explains the row above, for a card that has one. Kept apart so a
-// screen with four reset rows does not repeat it four times.
+// The line that explains a card of these. Kept apart so a card with four rows does
+// not repeat it four times.
 export function ResetNote() {
   const { staff: me } = useAdminSession();
-  if (whyNeedsTier(me?.tier, 'godfather') !== undefined) return null;
+  const mine = whyNeedsTier(me?.tier, 'godfather') === undefined;
+  const { data: status } = useAsyncData(
+    () => (mine ? testDataStatus() : Promise.resolve(undefined)),
+    [mine],
+  );
+
+  if (!mine) return null;
 
   return (
     <div style={{ marginTop: 'var(--space-md)' }}>
       <Note icon="warning-outline" tone="ink2">
-        Clearing test records is not something the server offers yet, so these do nothing. When it
-        does, each one will take a written reason and your authenticator code, and will be refused
-        outright once real customers are on the platform — see SXM_RENTALS_TEST_RESET_HANDOFF.md.
+        {status && !status.open
+          ? 'Clearing test records is closed for good on this platform — see Test Data for which condition shut it.'
+          : 'Each one takes a written reason and your authenticator code, and clears only what it names. Some have to go in a certain order; the server will say so rather than taking more than you asked for. See Test Data.'}
       </Note>
     </div>
+  );
+}
+
+// ---- A SCREEN WHOSE RECORDS HAVE NO KIND OF THEIR OWN ----
+// Refund requests belong to the bookings and go when those go. A "clear the
+// refunds" button here would either do nothing or quietly clear the bookings, and
+// both are worse than a sentence saying what is actually true.
+export function RefundsAreClearedWithBookings() {
+  const { staff: me } = useAdminSession();
+  if (whyNeedsTier(me?.tier, 'godfather') !== undefined) return null;
+
+  return (
+    <Note icon="warning-outline" tone="ink2">
+      Refund requests are not cleared on their own — they belong to the bookings and go when those
+      go. Clear the bookings from the Bookings screen or from Test Data, after the deposits.
+    </Note>
   );
 }
 

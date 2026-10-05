@@ -915,3 +915,17 @@
   gap: 2px;
   min-width: 0;
 }
+
+/* ---- WHAT IS KEEPING THE TEST-DATA WINDOW OPEN ----
+   The server's own sentences, one per line with a tick or a cross. */
+.conditionList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.conditionRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}

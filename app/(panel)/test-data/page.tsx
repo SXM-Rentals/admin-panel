@@ -2,143 +2,196 @@
 
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
-// WHAT THIS FILE DOES: The Godfather's screen for trying the platform out for
-// real and then putting it back — clearing one kind of record at a time, or
-// winding the whole platform back to how it stood on a particular day.
+// WHAT THIS FILE DOES: The Godfather's screen for trying the platform out for real
+// and then clearing up after it — every kind of test record that can go, in one
+// place, with the order they have to go in and what is keeping the window open.
 //
-// WHY A SCREEN RATHER THAN A BUTTON ON EACH LIST. Both exist, and they are for
-// different moments. The button on the Bookings screen is for "I have just made
-// six test bookings, clear those"; this screen is for standing back and seeing
-// everything that can be cleared in one place before a launch — which matters
-// because the dangerous mistake here is not pressing one button, it is pressing
-// five and losing track of which.
+// WHY A SCREEN AS WELL AS THE BUTTONS ON EACH LIST. They are for different
+// moments. The button on the Bookings screen is for "I have just made six test
+// bookings, clear those". This is for standing back before a launch and seeing
+// everything that can go — which matters because the dangerous mistake here is not
+// pressing one button, it is pressing five and losing track of which.
 //
-// WINDING BACK TO A DAY IS NOT THE SAME AS CLEARING, and the difference is worth
-// being precise about. Clearing removes a kind of record. Winding back restores
-// everything to how it stood at the end of a chosen day — bookings, payments,
-// customers, cars — which also means undoing things that were right. It is the
-// heavier of the two and is the last thing on the screen for that reason.
+// THE ORDER IS NOT A SUGGESTION. Some records hold others up, and the server
+// refuses rather than taking more than was asked for — deposits before bookings,
+// bookings before payouts, and so on. That refusal names what to clear first, and
+// the order is printed here so nobody has to discover it one refusal at a time.
 //
-// NONE OF IT WORKS YET, and the screen says so rather than pretending. The server
-// has no address for any of this; what it needs is written down in
-// SXM_RENTALS_TEST_RESET_HANDOFF.md, including the rule that matters most — that
-// all of it must be refused outright once real customers are on the platform.
+// WINDING BACK TO A DAY IS NOT HERE, AND THAT IS THE ANSWER RATHER THAN AN
+// OMISSION. It was asked for and the backend's reply was that it is a database
+// procedure on Neon rather than anything the panel can call. A button that cannot
+// work is worse than a documented procedure somebody has to ask for, so there is no
+// button — only this paragraph saying where it lives.
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useAsyncData } from '@/hooks/useAsyncData';
 import { useAdminSession } from '@/lib/auth';
 import { whyNeedsTier, TIER_LABELS } from '@/lib/tiers';
-import { localDay } from '@/lib/period';
+import { testDataStatus } from '@/lib/test-data';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
+import { LoadFailed } from '@/components/layout/LoadFailed';
 import { ResetControl } from '@/components/admin/ResetControl';
 import { Note } from '@/components/admin/shared';
-import { Button, Text } from '@/components/ui';
+import { Icon, Skeleton, StatusPill, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
 
 export default function TestDataPage() {
   const { staff: me } = useAdminSession();
-  const [day, setDay] = useState('');
-
   const notYours = whyNeedsTier(me?.tier, 'godfather');
+  const mine = notYours === undefined;
+
+  const { data: status, loading, error, refresh } = useAsyncData(
+    () => (mine ? testDataStatus() : Promise.resolve(undefined)),
+    [mine],
+  );
 
   // Nobody else gets a list of ways to destroy the platform's records, even a
   // greyed one. This is the single screen in the panel kept to one account.
-  if (notYours !== undefined) {
+  if (!mine) {
     return (
       <>
         <PageHead title="Test Data" description="Not an account that can do this." />
         <PageCard title="Only the Godfather">
           <Note icon="lock-closed-outline" tone="ink2">
-            Clearing records and winding the platform back are kept to the Godfather account alone —
-            not Owners, who can do everything else. Your account is{' '}
-            {me?.tier ? TIER_LABELS[me.tier] : 'not set'}.
+            Clearing records is kept to the Godfather account alone — not Owners, who can do
+            everything else in this panel. Your account is {me?.tier ? TIER_LABELS[me.tier] : 'not set'}.
           </Note>
         </PageCard>
       </>
     );
   }
 
+  if (error) return <LoadFailed title="Test Data" what="Whether records can be cleared" error={error} onRetry={refresh} />;
+
   return (
     <>
       <PageHead
         title="Test Data"
-        description="Try the platform out properly, then put it back. Yours alone — not Owners."
+        description="Try the platform out properly, then clear up after it. Yours alone — not Owners."
       />
 
-      <div style={{ marginBottom: 'var(--space-lg)' }}>
-        <Note icon="warning-outline" tone="ink2">
-          Everything on this screen destroys records rather than changing them, which is why it is
-          one account&rsquo;s to use. None of it works yet: the server has no address for any of it,
-          and when it does it will refuse all of it outright once real customers are on the platform.
-          The backend work is written up in SXM_RENTALS_TEST_RESET_HANDOFF.md.
-        </Note>
-      </div>
+      {/* ---- WHAT IS KEEPING THIS OPEN ----
+          First on the screen, because it is the thing that decides whether
+          anything below it will work, and because it will one day say "closed"
+          and somebody will need to know why without asking a developer. */}
+      <PageCard
+        title="Whether This Is Still Possible"
+        subtitle={status ? (status.open ? 'Open' : 'Closed for good') : undefined}
+      >
+        {loading ? (
+          <Skeleton height={120} />
+        ) : !status ? (
+          <Note>The server did not say.</Note>
+        ) : (
+          <>
+            <div className={styles.pillRow}>
+              <StatusPill
+                label={status.open ? 'Open' : 'Closed For Good'}
+                tone={status.open ? 'warning' : 'neutral'}
+              />
+              <Text variant="small" tone="ink3" as="span" raw>
+                {status.open
+                  ? 'Records can still be cleared. This shuts permanently the first time Stripe runs live.'
+                  : 'Nothing here can be cleared any more, and it cannot be reopened.'}
+              </Text>
+            </div>
 
-      <div className={styles.detailGrid}>
+            {/* The server's own sentences, printed as written. Two versions of
+                one condition is how a screen ends up disagreeing with the thing
+                it is describing. */}
+            <div style={{ marginTop: 'var(--space-lg)' }} className={styles.conditionList}>
+              {status.conditions.map((condition) => (
+                <div key={condition.name} className={styles.conditionRow}>
+                  <Icon
+                    name={condition.met ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+                    size={16}
+                    color={condition.met ? 'var(--success)' : 'var(--danger)'}
+                  />
+                  <Text variant="small" tone="ink2" as="span" raw>
+                    {condition.sentence}
+                  </Text>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </PageCard>
+
+      <div className={styles.detailGrid} style={{ marginTop: 'var(--space-lg)' }}>
         <div className={styles.detailStack}>
           <PageCard title="Clear One Thing At A Time" subtitle="Each one leaves the others alone">
-            <ResetControl what="the bookings" detail="Every booking and its history. Payments, payouts and deposits stay." />
-            <ResetControl what="the payments ledger" detail="Charges, refunds, payouts and commission. The bookings stay." />
-            <ResetControl what="the deposits" detail="Every deposit held, released and claimed." />
-            <ResetControl what="the cars" detail="Every vehicle a business added, and its listing decisions." />
             <ResetControl
-              what="what customers have spent"
-              detail="Lifetime spend, points and booking counts back to nothing. The accounts stay."
+              what="deposits"
+              label="the deposits"
+              detail="Every deposit held, released and claimed. The bookings stay."
             />
             <ResetControl
-              what="the businesses"
+              what="bookings"
+              label="the bookings"
+              detail="Every booking and its history, and the refund requests that belong to them. Payments and payouts stay."
+            />
+            <ResetControl
+              what="payouts"
+              label="the payouts"
+              detail="What businesses were owed and what was sent. The bookings behind them stay."
+            />
+            <ResetControl
+              what="vehicles"
+              label="the cars"
+              detail="Every vehicle a business added, with its listing decisions and paperwork. The businesses stay."
+            />
+            <ResetControl
+              what="providers"
+              label="the businesses"
               detail="Every rental business and its fleet. Staff accounts and the audit log stay."
             />
-          </PageCard>
-
-          <PageCard title="What Is Never Cleared">
-            <Note>
-              Staff accounts and the audit log stay whatever happens here. The log is the record of
-              what we did to this platform, including what was cleared and by whom, and a record that
-              can be erased by the person it is about is not a record.
-            </Note>
+            <ResetControl
+              what="payments"
+              label="the payments ledger"
+              detail="Charges, refunds and commission. The bookings stay. Can go at any point."
+            />
+            <ResetControl
+              what="customer_spend"
+              label="what customers have spent"
+              detail="Lifetime spend, points and booking counts back to nothing. The accounts themselves stay, and they can still sign in."
+            />
           </PageCard>
         </div>
 
         <div className={styles.detailStack}>
-          <PageCard title="Wind Everything Back To A Day" subtitle="Heavier than clearing — read this first">
-            <Note icon="warning-outline" tone="ink2">
-              This puts the whole platform back to how it stood at the end of the day you choose:
-              bookings, payments, customers and cars together. It undoes the things that were right
-              as well as the things that were not, and there is no winding forward again.
+          <PageCard title="The Order They Go In">
+            <Note>
+              Some records hold others up. This order always works, and anything refused will say
+              what to clear first rather than taking more than you asked for:
             </Note>
-
-            <div style={{ marginTop: 'var(--space-lg)' }}>
-              <Text variant="caption" tone="ink3" as="p" raw>
-                END OF THIS DAY
+            <div style={{ marginTop: 'var(--space-md)' }}>
+              <Text variant="label" as="p" raw>
+                Deposits → bookings → payouts → cars → businesses
               </Text>
               <div style={{ marginTop: 'var(--space-xs)' }}>
-                <input
-                  type="date"
-                  className={styles.dateInput}
-                  value={day}
-                  max={localDay(new Date())}
-                  onChange={(event) => setDay(event.target.value)}
-                  aria-label="The day to wind back to"
-                />
+                <Text variant="small" tone="ink3" as="p" raw>
+                  The payments ledger and what customers have spent can go at any point, in any
+                  order.
+                </Text>
               </div>
             </div>
+          </PageCard>
 
-            <div style={{ marginTop: 'var(--space-lg)' }}>
-              <Button
-                label="Wind Back"
-                variant="danger"
-                size="md"
-                disabled
-                title="The SXM Rentals server does not offer this yet."
-              />
-            </div>
+          <PageCard title="What Is Never Cleared">
+            <Note>
+              Staff accounts and the audit log survive all of this. The log is the record of what was
+              done to this platform — including each of these clearances, under the name of whoever
+              pressed it — and a record the person it is about can erase is not a record.
+            </Note>
+          </PageCard>
 
-            <div style={{ marginTop: 'var(--space-md)' }}>
-              <Note>
-                Not connected yet. When it is, it will take a written reason and your authenticator
-                code, and the panel will make you type the date again before it goes.
-              </Note>
-            </div>
+          <PageCard title="Winding Back To A Day">
+            <Note icon="warning-outline" tone="ink2">
+              There is no button for this and there will not be one. Putting the platform back to how
+              it stood on a particular day is a database procedure on Neon rather than anything the
+              panel can ask for — ask whoever looks after the database. A button that cannot work
+              would be worse than this paragraph.
+            </Note>
           </PageCard>
         </div>
       </div>

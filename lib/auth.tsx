@@ -42,6 +42,7 @@ import {
 import { setSessionLostHandler } from '@/lib/api/http';
 import type { AdminStaff, AdminTier } from '@/types';
 import { whyCannotChange } from '@/lib/tiers';
+import { forgetTestDataStatus } from '@/lib/test-data';
 
 // Where the session currently stands.
 //
@@ -174,6 +175,9 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
     setStaff(null);
     setMustChangePassword(false);
     setPhase('signed-out');
+    // Anything cached for the person who was signed in goes with them. Only the
+    // test-data window is cached at all; see lib/test-data.ts.
+    forgetTestDataStatus();
   }, []);
 
   const value = useMemo<SessionValue>(

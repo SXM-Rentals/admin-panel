@@ -290,9 +290,21 @@ export default function AnalyticsPage() {
 
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <PageCard title="Test Records" subtitle="These charts are drawn from these records">
-          <ResetControl what="the bookings" detail="Empties the bookings chart, and the revenue with it." />
-          <ResetControl what="the payments ledger" detail="Empties the revenue chart. The bookings stay on theirs." />
-          <ResetControl what="what customers have spent" detail="Empties new-customer figures and lifetime spend." />
+          <ResetControl
+            what="bookings"
+            label="the bookings"
+            detail="Empties the bookings chart. The revenue chart is drawn from the payments and stays."
+          />
+          <ResetControl
+            what="payments"
+            label="the payments ledger"
+            detail="Empties the revenue chart. The bookings stay on theirs."
+          />
+          <ResetControl
+            what="customer_spend"
+            label="what customers have spent"
+            detail="Puts lifetime spend and points back to nothing. The accounts stay."
+          />
           <ResetNote />
         </PageCard>
       </div>

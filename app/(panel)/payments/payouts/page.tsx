@@ -274,8 +274,9 @@ export default function PayoutsPage() {
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <PageCard title="Test Records">
           <ResetControl
-            what="the payouts"
-            detail="What businesses were owed and what was sent. The bookings behind them stay."
+            what="payouts"
+            label="the payouts"
+            detail="What businesses were owed and what was sent. The bookings behind them stay — clear those first if you are clearing both."
           />
           <ResetNote />
         </PageCard>

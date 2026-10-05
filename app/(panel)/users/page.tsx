@@ -193,9 +193,13 @@ export default function UsersPage() {
 
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <PageCard title="Test Records">
+          {/* Points are part of what somebody has spent, not a thing of their own:
+              one kind of record covers both, so there is one row rather than two
+              that would do the same thing under different names. */}
           <ResetControl
-            what="what customers have spent"
-            detail="Lifetime spend, points and booking counts go back to nothing. The accounts themselves stay."
+            what="customer_spend"
+            label="what customers have spent"
+            detail="Lifetime spend, points and booking counts back to nothing. The accounts stay and can still sign in."
           />
           <ResetNote />
         </PageCard>

@@ -217,8 +217,9 @@ export default function PaymentsPage() {
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <PageCard title="Test Records">
           <ResetControl
-            what="the payments ledger"
-            detail="Every charge, refund, payout and commission line. Bookings and deposits stay."
+            what="payments"
+            label="the payments ledger"
+            detail="Every charge, refund and commission line. Bookings and deposits stay, and this can go at any point."
           />
           <ResetNote />
         </PageCard>

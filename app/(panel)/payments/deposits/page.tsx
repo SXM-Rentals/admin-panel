@@ -296,8 +296,9 @@ export default function DepositsLedgerPage() {
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <PageCard title="Test Records">
           <ResetControl
-            what="the deposits"
-            detail="Every deposit held, released and claimed. The bookings stay."
+            what="deposits"
+            label="the deposits"
+            detail="Every deposit held, released and claimed. The bookings stay, and these have to go before they can."
           />
           <ResetNote />
         </PageCard>

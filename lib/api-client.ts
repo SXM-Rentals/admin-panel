@@ -38,6 +38,9 @@ import { ApiError } from '@/lib/api/errors';
 import type {
   AdminBooking,
   AdminTier,
+  TestDataCleared,
+  TestDataStatus,
+  TestDataWhat,
   BookingAgreement,
   FleetRequest,
   IdentityDecision,
@@ -444,6 +447,26 @@ export const apiClient = {
   // no "before" for a reason to explain.
   async markFleetRequestDone(id: string): Promise<FleetRequest> {
     return api.post<FleetRequest>(`/admin/fleet-requests/${encodeURIComponent(id)}/done`);
+  },
+
+  // ---- CLEARING TEST RECORDS ----
+  // Whether any of this is still possible, and which conditions are keeping it so.
+  // Cached for the panel by lib/test-data.ts: eight controls across six screens
+  // would otherwise ask the same question eight times.
+  async getTestDataStatus(): Promise<TestDataStatus> {
+    return api.get<TestDataStatus>('/admin/test-data/status');
+  },
+
+  // ONE KIND AT A TIME, AND NEVER MORE THAN WAS ASKED FOR. Where clearing one
+  // would have to take another with it the server refuses with `would_take_more`
+  // and says what to clear first — deposits before bookings, bookings before
+  // payouts, and so on — rather than quietly taking both. That sentence is shown
+  // to the person word for word.
+  //
+  // Godfather only, with the authenticator code, and refused outright once the
+  // platform has run live.
+  async clearTestData(what: TestDataWhat, reason: string, code: string): Promise<TestDataCleared> {
+    return api.post<TestDataCleared>('/admin/test-data/clear', { body: { what, reason, code } });
   },
 
   // ---- ANALYTICS ----
