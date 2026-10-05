@@ -148,6 +148,51 @@ export default function BookingDetailPage() {
               up as a fact. Reading a conversation is often the first thing a
               dispute needs, which is why the card stays and says what is
               missing. */}
+          {/* ---- IF IT WAS CALLED OFF ----
+              First in this column when it applies, because it is the reason
+              somebody has opened the booking. A cancellation used to be a status
+              and nothing else; the server now says when, who by, and why. */}
+          {booking.status === 'cancelled' ? (
+            <PageCard title="Cancelled" subtitle={booking.cancelledAt ? longDate(booking.cancelledAt) : undefined}>
+              <InfoRows>
+                <InfoRow
+                  label="When"
+                  value={booking.cancelledAt ? longDate(booking.cancelledAt) : 'Not recorded'}
+                />
+                <InfoRow
+                  label="By"
+                  value={
+                    booking.cancelledBy === 'customer'
+                      ? 'The customer'
+                      : booking.cancelledBy === 'provider'
+                        ? 'The business'
+                        : booking.cancelledBy === 'staff'
+                          ? 'Us, from this panel'
+                          : 'Not recorded'
+                  }
+                />
+              </InfoRows>
+
+              <div style={{ marginTop: 'var(--space-lg)' }}>
+                {booking.cancellationReason ? (
+                  <>
+                    <Text variant="caption" tone="ink3" as="p" raw>
+                      WHAT THEY SAID
+                    </Text>
+                    <Text variant="small" tone="ink2" as="p" raw>
+                      {booking.cancellationReason}
+                    </Text>
+                  </>
+                ) : (
+                  <Note>
+                    No reason was kept with this one. Reasons have only been recorded since 30
+                    September, so this does not mean none was given at the time.
+                  </Note>
+                )}
+              </div>
+            </PageCard>
+          ) : null}
+
           <PageCard title="Messages" subtitle="Not connected yet">
             <Note>
               Staff cannot read the conversation between the customer and the business yet — the

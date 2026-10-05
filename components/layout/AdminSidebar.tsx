@@ -74,6 +74,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     title: 'Finance',
     items: [
       { href: '/payments', label: 'Payments', icon: 'card-outline' },
+      { href: '/payments/payouts', label: 'Payouts', icon: 'cash-outline' },
       { href: '/payments/refunds', label: 'Refunds', icon: 'swap-horizontal' },
       { href: '/payments/deposits', label: 'Deposits', icon: 'wallet-outline' },
     ],

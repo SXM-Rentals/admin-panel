@@ -114,6 +114,20 @@ export type ReasonDialogProps = {
     required?: boolean;
   };
 
+  // ---- A REFERENCE FROM SOMEWHERE ELSE ----
+  // The bank's own reference for a transfer somebody has already made. Required
+  // whenever it is asked for, because a recorded payment nobody can match to a
+  // bank statement is worse than no record: it looks like proof and is not.
+  //
+  // The third and last named field here. Each one is a specific thing with its
+  // own rule, not a slot for anything — a general-purpose field is how a dialog
+  // built to guarantee one rule slowly turns into a form.
+  reference?: {
+    label: string;
+    hint?: string;
+    placeholder?: string;
+  };
+
   // ---- YOUR AUTHENTICATOR CODE, FOR THE CHANGES THAT DECIDE WHO GETS IN ----
   // Adding a member of staff, resetting one, taking one's access away. A session
   // left open on somebody's desk is enough to approve a refund; it is
@@ -127,7 +141,7 @@ export type ReasonDialogProps = {
   // dialog stays open with everything still typed, and says what went wrong.
   onConfirm: (
     reason: string,
-    extras: { amount?: number; code?: string; customerNote?: string },
+    extras: { amount?: number; code?: string; customerNote?: string; reference?: string },
   ) => Promise<void> | void;
 };
 
@@ -142,6 +156,7 @@ export function ReasonDialog({
   change,
   amount,
   customerNote,
+  reference,
   confirmWithCode = false,
   onConfirm,
 }: ReasonDialogProps) {
@@ -150,6 +165,7 @@ export function ReasonDialog({
   const [reason, setReason] = useState('');
   const [amountText, setAmountText] = useState('');
   const [note, setNote] = useState('');
+  const [referenceText, setReferenceText] = useState('');
   const [code, setCode] = useState('');
   const [touched, setTouched] = useState(false);
   const [working, setWorking] = useState(false);
@@ -217,11 +233,18 @@ export function ReasonDialog({
       ? undefined
       : 'Write the line this person will read — it is the only explanation they get.';
 
+  // Short enough that anything under four characters is a slip, not a reference.
+  const referenceProblem =
+    !reference || referenceText.trim().length >= 4
+      ? undefined
+      : 'Enter the reference the bank gave it — our record is matched to theirs by this alone.';
+
   const blocked =
     whyNoChanges !== undefined ||
     tooShort ||
     amountProblem !== undefined ||
     noteProblem !== undefined ||
+    referenceProblem !== undefined ||
     codeProblem !== undefined;
 
   const submit = async () => {
@@ -232,9 +255,10 @@ export function ReasonDialog({
     setProblem(undefined);
 
     // Only what was asked for goes back to the screen.
-    const extras: { amount?: number; code?: string; customerNote?: string } = {};
+    const extras: { amount?: number; code?: string; customerNote?: string; reference?: string } = {};
     if (amount) extras.amount = parsedAmount;
     if (customerNote && note.trim() !== '') extras.customerNote = note.trim();
+    if (reference) extras.reference = referenceText.trim();
     if (confirmWithCode) extras.code = code;
 
     try {
@@ -392,6 +416,19 @@ export function ReasonDialog({
               customerNote.hint ??
               'Sent to them as written. Not in the audit log — the reason above is what is recorded.'
             }
+          />
+        ) : null}
+
+        {reference ? (
+          <Input
+            label={reference.label}
+            value={referenceText}
+            onChange={(event) => setReferenceText(event.target.value)}
+            onBlur={() => setTouched(true)}
+            placeholder={reference.placeholder}
+            error={touched ? referenceProblem : undefined}
+            hint={reference.hint ?? 'Copied from the bank, exactly as it appears there.'}
+            required
           />
         ) : null}
 

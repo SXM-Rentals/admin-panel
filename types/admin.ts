@@ -235,6 +235,15 @@ export type AdminVehicle = {
   // The number plate. The one thing anybody asks for on a phone call about a
   // car, and the server has been sending it for a while.
   registration?: string;
+  // When the business added the car.
+  createdAt?: string;
+  // WHEN IT FIRST WENT ON SALE, which is a different day and usually a later
+  // one — paperwork takes time. Null means one of two things, and they are not
+  // the same: it has never been on sale, or it is an older car from before the
+  // server kept this. So a null is only read as "not on sale yet" when the
+  // listing says so too; otherwise the screen says the date is unknown rather
+  // than inventing one. See the vehicles list.
+  listedAt?: string | null;
 };
 
 // ONE vehicle, opened on its own, also carries its paperwork. The list of all
@@ -267,6 +276,16 @@ export type AdminBooking = {
   depositStatus: DepositStatus;
   paymentStatus: 'paid' | 'authorized' | 'refunded' | 'failed';
   agreementSigned: boolean;
+  // ---- IF IT WAS CANCELLED ----
+  // All null while a booking is live. Until the server sent these, a booking
+  // said only that it WAS cancelled, so the activity feed had to place it under
+  // the day it was booked and admit it did not know.
+  cancelledAt?: string | null;
+  cancelledBy?: 'customer' | 'provider' | 'staff' | null;
+  // Only written since 30 September 2026. Older cancellations have a time and
+  // nobody's words, which is not the same as nobody having had a reason — the
+  // screens say "none recorded" rather than "no reason given".
+  cancellationReason?: string | null;
   messageCount: number;
   createdAt: string;
 };
@@ -343,6 +362,13 @@ export type AdminPayout = {
   periodEnd: string;
   status: 'paid' | 'pending' | 'processing';
   paidOn?: string;
+  // HOW THIS BUSINESS GETS ITS MONEY. Stripe sends it by itself; a bank transfer
+  // is somebody at a keyboard moving money and then writing down what they did.
+  // The two are not interchangeable and the server refuses the wrong one.
+  method?: 'stripe' | 'bank_transfer';
+  // The bank's own reference for a transfer, recorded after it was sent. It is
+  // the only way to tie our record to the bank's.
+  bankReference?: string | null;
 };
 
 // ---- DISPUTES ----

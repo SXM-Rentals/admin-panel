@@ -18,7 +18,7 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
-import { money, vehicleClassLabels } from '@/lib/format';
+import { money, relativeDay, shortDate, vehicleClassLabels } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -83,6 +83,28 @@ export default function VehiclesPage() {
         <Text variant="small" tone="ink2" as="span" raw>
           {vehicleClassLabels[v.vehicleClass] ?? v.vehicleClass}
         </Text>
+      ),
+    },
+    {
+      // WHEN IT APPEARED, AND WHEN IT WENT ON SALE — two different days, and the
+      // gap between them is how long the paperwork took. A null listedAt means
+      // one of two things and they are not the same: never on sale, or an older
+      // car from before the server kept the date. So it is only read as "not yet"
+      // when the listing agrees.
+      id: 'added',
+      header: 'Added',
+      sortValue: (v) => v.createdAt ?? '',
+      cell: (v) => (
+        <CellStack
+          title={v.createdAt ? relativeDay(v.createdAt) : 'Not said'}
+          detail={
+            v.listedAt
+              ? `on sale ${shortDate(v.listedAt)}`
+              : v.listingStatus === 'live'
+                ? 'on sale, date unknown'
+                : 'not on sale yet'
+          }
+        />
       ),
     },
     {

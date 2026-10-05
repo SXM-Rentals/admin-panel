@@ -6,12 +6,12 @@
 // meant for a customer is never the sentence written for the audit log.
 //
 // WHY THE ACTIVITY SCREEN NEEDS A TEST AT ALL, being read-only. It is assembled
-// out of two lists that were never meant to be one, so it is the one screen in the
-// panel that could quietly state something false: a cancellation has no time on
-// it, and placing it under the day the booking was MADE looks like a fact. It is
-// marked instead. And commission must never appear as money moving, because it is
-// our share of a charge already on the list — counted twice, a quiet day looks
-// twice as busy as it was.
+// out of three lists that were never meant to be one, so it is the screen most
+// able to state something false. Two ways in particular: commission must never
+// appear as money moving, because it is our share of a charge already on the list
+// — counted twice, a quiet day looks twice as busy as it was. And a cancellation
+// must sit at the time it was cancelled, not the time it was booked, now that the
+// server says which is which.
 //
 // AND WHY THE TWO PIECES OF WRITING ARE WORTH GUARDING. The reason goes in the
 // audit log and can be internal; the message is read by the customer. One sentence
@@ -58,7 +58,16 @@ const BOOKING = {
   createdAt: '2026-10-03T09:30:00.000Z',
 };
 
-const CANCELLED = { ...BOOKING, id: 'bk-2', reference: 'BK-1002', status: 'cancelled', createdAt: '2026-10-02T08:00:00.000Z' };
+const CANCELLED = {
+  ...BOOKING,
+  id: 'bk-2',
+  reference: 'BK-1002',
+  status: 'cancelled',
+  createdAt: '2026-09-20T08:00:00.000Z',
+  cancelledAt: '2026-09-28T14:20:00.000Z',
+  cancelledBy: 'provider',
+  cancellationReason: 'The renters changed their plans and asked us to call it off.',
+};
 
 const LEDGER = [
   {
@@ -92,6 +101,7 @@ describe('seeing what has been happening', () => {
       '/admin/me': ME,
       'GET /admin/bookings': [BOOKING, CANCELLED],
       'GET /admin/payments': LEDGER,
+      'GET /admin/vehicles': [],
     });
     render(<ActivityPage />);
 
@@ -103,25 +113,65 @@ describe('seeing what has been happening', () => {
     expect(screen.queryByText(/\$48/)).not.toBeInTheDocument();
   });
 
-  it('admits it does not know when a cancellation happened', async () => {
+  it('places a cancellation when it was cancelled, and says who called it off', async () => {
     serve({
       '/admin/me': ME,
       'GET /admin/bookings': [CANCELLED],
       'GET /admin/payments': [],
+      'GET /admin/vehicles': [],
     });
     render(<ActivityPage />);
 
-    const row = (await screen.findByText(/BK-1002 cancelled/)).closest('a');
-    // The only time we have is when it was booked, so the row says so rather than
-    // placing it as though that were the cancellation.
-    expect(row).toHaveTextContent(/time unknown/i);
+    const row = (await screen.findByText(/BK-1002 cancelled by the business/)).closest('a');
+    // The time it was CANCELLED (14:20 UTC), not the time it was booked
+    // (08:00 UTC). Which of the two it uses is the whole point of the change.
+    expect(row).toHaveTextContent(/10:20/);
+    expect(row).not.toHaveTextContent(/04:00/);
+    expect(row).toHaveTextContent(/changed their plans/);
   });
 
-  it('says what it cannot show, rather than looking complete', async () => {
-    serve({ '/admin/me': ME, 'GET /admin/bookings': [], 'GET /admin/payments': [] });
+  it('does not pretend an old cancellation had no reason', async () => {
+    // Cancellations before 30 September have a time and nobody's words.
+    serve({
+      '/admin/me': ME,
+      'GET /admin/bookings': [{ ...CANCELLED, cancellationReason: null }],
+      'GET /admin/payments': [],
+      'GET /admin/vehicles': [],
+    });
     render(<ActivityPage />);
 
-    expect(await screen.findByText(/a car being added carries no date/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no reason recorded/i)).toBeInTheDocument();
+  });
+
+  it('shows a car appearing and going on sale as two different days', async () => {
+    serve({
+      '/admin/me': ME,
+      'GET /admin/bookings': [],
+      'GET /admin/payments': [],
+      'GET /admin/vehicles': [
+        {
+          id: 'v-1',
+          reference: 'VH-V1',
+          providerId: 'pr-1',
+          providerName: 'Bay Road Rentals',
+          make: 'Toyota',
+          model: 'Yaris',
+          year: 2023,
+          vehicleClass: 'economy',
+          dailyRate: 55,
+          side: 'dutch',
+          listingStatus: 'live',
+          registration: 'M-4471',
+          createdAt: '2026-09-20T10:00:00.000Z',
+          listedAt: '2026-09-27T10:00:00.000Z',
+        },
+      ],
+    });
+    render(<ActivityPage />);
+
+    // Two events, because they are two days and the gap is the paperwork.
+    expect(await screen.findByText(/Toyota Yaris 2023 added/)).toBeInTheDocument();
+    expect(screen.getByText(/Toyota Yaris 2023 went on sale/)).toBeInTheDocument();
   });
 });
 

@@ -18,14 +18,20 @@
 // commission line landed. Put in one order, that is most of what moves on this
 // platform in a day.
 //
-// WHAT IT CANNOT SHOW YET, SAID ON THE SCREEN AND NOT ONLY HERE:
-//   · When a car was added. The vehicle the server sends has no created date, so
-//     "six cars went up this week" is not answerable. One field on the server.
-//   · When a booking was cancelled, or by whom. A booking says it IS cancelled,
-//     and nothing says when that happened, so a cancellation appears at the time
-//     the booking was MADE rather than when it fell through. The screen marks
-//     those rows for exactly that reason.
-// Both are written up for the backend in SXM_RENTALS_ACTIVITY_HANDOFF.md.
+// IT USED TO HAVE TO LIE A LITTLE, AND NO LONGER DOES. When this screen was
+// built, a cancellation carried no time and a car carried no dates, so a
+// cancellation sat under the day the booking was made with "time unknown" against
+// it. The server now sends `cancelledAt`, `cancelledBy` and `cancellationReason`
+// on a booking, and `createdAt` and `listedAt` on a vehicle, so cars appearing and
+// going on sale are events here too and every row sits at the time it happened.
+//
+// WHAT IS STILL THIN, AND SAID ON THE SCREEN: cancellation REASONS exist only from
+// 30 September 2026. An older cancellation has a time and nobody's words, which is
+// not the same as nobody having had a reason — so those say "none recorded" rather
+// than implying none was given. And this feed is still assembled here out of three
+// lists rather than read from one: the backend has said an events table is coming
+// and will be separate from the audit log, and when it lands this screen reads one
+// address instead. Nothing else depends on how it is built.
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -45,6 +51,8 @@ type Happening =
   | 'booking_made'
   | 'booking_cancelled'
   | 'booking_finished'
+  | 'car_added'
+  | 'car_on_sale'
   | 'money_in'
   | 'money_back'
   | 'money_out';
@@ -52,9 +60,6 @@ type Happening =
 type Event = {
   key: string;
   at: string;
-  // True when `at` is not when this happened, only the nearest time we have. The
-  // row says so rather than quietly placing it wrongly.
-  atIsApproximate: boolean;
   what: Happening;
   title: string;
   detail: string;
@@ -65,18 +70,29 @@ const LOOK: Record<Happening, { icon: IconName; colour: string; label: string }>
   booking_made: { icon: 'calendar-outline', colour: 'var(--brand)', label: 'Booked' },
   booking_cancelled: { icon: 'alert-circle-outline', colour: 'var(--danger)', label: 'Cancelled' },
   booking_finished: { icon: 'checkmark-circle-outline', colour: 'var(--success)', label: 'Finished' },
+  car_added: { icon: 'car-outline', colour: 'var(--ink2)', label: 'Car added' },
+  car_on_sale: { icon: 'storefront-outline', colour: 'var(--success)', label: 'Car on sale' },
   money_in: { icon: 'card-outline', colour: 'var(--success)', label: 'Paid' },
   money_back: { icon: 'swap-horizontal', colour: 'var(--warning)', label: 'Refunded' },
   money_out: { icon: 'cash-outline', colour: 'var(--ink2)', label: 'Paid out' },
 };
 
-type Which = 'all' | 'bookings' | 'money';
+type Which = 'all' | 'bookings' | 'cars' | 'money';
+
+// Words for who called a booking off. "Provider" is what the server says; nobody
+// in this office calls a rental company that out loud.
+const BY: Record<'customer' | 'provider' | 'staff', string> = {
+  customer: 'the customer',
+  provider: 'the business',
+  staff: 'us',
+};
 
 export default function ActivityPage() {
   const [which, setWhich] = useState<Which>('all');
 
   const bookings = useAsyncData(() => apiClient.listBookings(), []);
   const ledger = useAsyncData(() => apiClient.getLedger(), []);
+  const vehicles = useAsyncData(() => apiClient.listVehicles(), []);
 
   const events = useMemo<Event[]>(() => {
     const out: Event[] = [];
@@ -84,26 +100,54 @@ export default function ActivityPage() {
     for (const booking of bookings.data ?? []) {
       const who = `${booking.customerName} · ${booking.vehicleLabel}`;
       if (booking.status === 'cancelled') {
+        const by = booking.cancelledBy ? BY[booking.cancelledBy] : undefined;
         out.push({
           key: `b-cancel-${booking.id}`,
-          // THE ONLY TIME WE HAVE is when the booking was made. See the note at
-          // the top: the server does not say when it was cancelled.
-          at: booking.createdAt,
-          atIsApproximate: true,
+          // At the time it was cancelled. A booking from before the server kept
+          // that falls back to when it was made, which is the only time there is.
+          at: booking.cancelledAt ?? booking.createdAt,
           what: 'booking_cancelled',
-          title: `${booking.reference} cancelled`,
-          detail: `${who} · ${money(booking.gross)}`,
+          title: `${booking.reference} cancelled${by ? ` by ${by}` : ''}`,
+          // The reason when there is one. Older cancellations have none kept,
+          // which is not the same as nobody having given one.
+          detail: `${who} · ${money(booking.gross)}${booking.cancellationReason ? ` · “${booking.cancellationReason}”` : ' · no reason recorded'}`,
           href: `/bookings/${booking.id}`,
         });
       } else {
         out.push({
           key: `b-made-${booking.id}`,
           at: booking.createdAt,
-          atIsApproximate: false,
           what: booking.status === 'completed' ? 'booking_finished' : 'booking_made',
           title: `${booking.reference} ${booking.status === 'completed' ? 'ran and finished' : 'booked'}`,
           detail: `${who} · ${money(booking.gross)} · ${booking.providerName}`,
           href: `/bookings/${booking.id}`,
+        });
+      }
+    }
+
+    // TWO SEPARATE EVENTS FOR ONE CAR, because they are two different days and
+    // the gap between them is the paperwork. A car added is a business getting
+    // ready; a car on sale is a car customers can book.
+    for (const vehicle of vehicles.data ?? []) {
+      const label = `${vehicle.make} ${vehicle.model} ${vehicle.year}`;
+      if (vehicle.createdAt) {
+        out.push({
+          key: `v-add-${vehicle.id}`,
+          at: vehicle.createdAt,
+          what: 'car_added',
+          title: `${label} added`,
+          detail: `${vehicle.providerName}${vehicle.registration ? ` · ${vehicle.registration}` : ''}`,
+          href: `/vehicles/${vehicle.id}/verification`,
+        });
+      }
+      if (vehicle.listedAt) {
+        out.push({
+          key: `v-live-${vehicle.id}`,
+          at: vehicle.listedAt,
+          what: 'car_on_sale',
+          title: `${label} went on sale`,
+          detail: `${vehicle.providerName} · ${money(vehicle.dailyRate)} a day`,
+          href: `/vehicles/${vehicle.id}/verification`,
         });
       }
     }
@@ -116,7 +160,6 @@ export default function ActivityPage() {
       out.push({
         key: `l-${line.id}`,
         at: line.at,
-        atIsApproximate: false,
         what,
         title:
           line.kind === 'charge'
@@ -132,17 +175,18 @@ export default function ActivityPage() {
     }
 
     return out.sort((a, b) => b.at.localeCompare(a.at));
-  }, [bookings.data, ledger.data]);
+  }, [bookings.data, ledger.data, vehicles.data]);
 
   const shown = events.filter((event) => {
     if (which === 'all') return true;
     if (which === 'money') return event.what.startsWith('money');
+    if (which === 'cars') return event.what.startsWith('car');
     return event.what.startsWith('booking');
   });
 
   // Either list failing makes this screen a half-truth, so it says so rather than
   // showing the half it has.
-  const failure = bookings.error ?? ledger.error;
+  const failure = bookings.error ?? ledger.error ?? vehicles.error;
   if (failure) {
     return (
       <LoadFailed
@@ -152,16 +196,17 @@ export default function ActivityPage() {
         onRetry={() => {
           bookings.refresh();
           ledger.refresh();
+          vehicles.refresh();
         }}
       />
     );
   }
 
-  const loading = bookings.loading || ledger.loading;
+  const loading = bookings.loading || ledger.loading || vehicles.loading;
 
   // Today's own tally, for the one question somebody opening this screen has.
   const today = new Date().toISOString().slice(0, 10);
-  const todayCount = events.filter((event) => !event.atIsApproximate && event.at.slice(0, 10) === today).length;
+  const todayCount = events.filter((event) => event.at.slice(0, 10) === today).length;
 
   return (
     <>
@@ -182,6 +227,7 @@ export default function ActivityPage() {
             options={[
               { value: 'all', label: 'Everything', count: events.length },
               { value: 'bookings', label: 'Bookings', count: events.filter((e) => e.what.startsWith('booking')).length },
+              { value: 'cars', label: 'Cars', count: events.filter((e) => e.what.startsWith('car')).length },
               { value: 'money', label: 'Money', count: events.filter((e) => e.what.startsWith('money')).length },
             ]}
           />
@@ -209,15 +255,10 @@ export default function ActivityPage() {
                     </Text>
                   </span>
                   <span className={styles.timelineWhen}>
+                    <StatusPill label={look.label} tone="neutral" dot={false} />
                     <Text variant="small" tone="ink3" as="span" raw>
-                      {relativeDay(event.at)}
-                      {event.atIsApproximate ? '' : ` at ${clockTime(event.at)}`}
+                      {relativeDay(event.at)} at {clockTime(event.at)}
                     </Text>
-                    {event.atIsApproximate ? (
-                      // Said on the row itself. A cancellation sitting under the
-                      // date it was booked would otherwise read as a lie.
-                      <StatusPill label="Time unknown" tone="neutral" dot={false} />
-                    ) : null}
                   </span>
                 </>
               );
@@ -238,11 +279,11 @@ export default function ActivityPage() {
 
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <Note icon="warning-outline" tone="ink2">
-          Built from the bookings and the payments ledger, which is what the server can tell us
-          about when things happened. Two things are missing on purpose rather than by oversight: a
-          car being added carries no date at all, and a cancellation carries no time — those rows say
-          &ldquo;time unknown&rdquo; and sit under the day the booking was made. Both are asked for in
-          SXM_RENTALS_ACTIVITY_HANDOFF.md.
+          Built here from the bookings, the vehicles and the payments ledger rather than read from
+          one feed — the server is getting an events table of its own, and this screen will read that
+          instead when it does. One thin spot in the meantime: cancellation reasons were only kept
+          from 30 September, so an older one says &ldquo;no reason recorded&rdquo; rather than that
+          nobody gave one.
         </Note>
       </div>
     </>

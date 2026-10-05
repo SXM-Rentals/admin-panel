@@ -365,7 +365,15 @@ export const backendRoutes: { group: string; purpose: string }[] = [
 
   // ---- MONEY ----
   { group: 'GET /admin/payments', purpose: 'The ledger: charges, refunds, payouts and commission' },
-  { group: 'GET /admin/payouts', purpose: 'Money sent on to businesses — ready, not yet on a screen' },
+  { group: 'GET /admin/payouts', purpose: 'Money owed and sent on to businesses' },
+  {
+    group: 'POST /admin/payouts/:id/send',
+    purpose: 'Asking Stripe to send a payout. Owner access, a reason and your code',
+  },
+  {
+    group: 'POST /admin/payouts/:id/mark-paid',
+    purpose: 'Recording a bank transfer that was already made, with its bank reference',
+  },
   { group: 'GET /admin/refunds', purpose: 'The refund queue' },
   { group: 'POST /admin/refunds/:id/decision', purpose: 'Approving or denying a refund, with a reason' },
   { group: 'GET /admin/deposits', purpose: 'Every security deposit — never revenue' },

@@ -284,9 +284,37 @@ export const apiClient = {
     return api.get<LedgerEntry[]>('/admin/payments', { query: { limit: LIST_LIMIT } });
   },
 
-  // Money sent on to rental businesses. Read only: Stripe sends it.
+  // Money sent on to rental businesses.
   async listPayouts(): Promise<AdminPayout[]> {
     return api.get<AdminPayout[]>('/admin/payouts', { query: { limit: LIST_LIMIT } });
+  },
+
+  // ---- ACTUALLY SENDING A BUSINESS ITS MONEY ----
+  // The two heaviest buttons in this panel, and the only ones that move money
+  // OUT. Both need the authenticator code as well as a reason, and Owner access
+  // or above, because the server requires all three.
+  //
+  // THIS ONE ASKS STRIPE TO SEND IT. A business paid by bank transfer is refused
+  // with `paid_by_bank_transfer`, and that refusal is the point rather than an
+  // inconvenience: it is how the panel cannot pay somebody twice by two routes.
+  async sendPayout(id: string, reason: string, code: string): Promise<AdminPayout> {
+    return api.post<AdminPayout>(`/admin/payouts/${encodeURIComponent(id)}/send`, {
+      body: { reason, code },
+    });
+  },
+
+  // AND THIS ONE RECORDS A TRANSFER SOMEBODY ALREADY MADE at the bank. It moves
+  // no money: it writes down that money moved, which is why the bank's own
+  // reference is required — without it our record cannot be matched to theirs.
+  async markPayoutPaid(
+    id: string,
+    bankReference: string,
+    reason: string,
+    code: string,
+  ): Promise<AdminPayout> {
+    return api.post<AdminPayout>(`/admin/payouts/${encodeURIComponent(id)}/mark-paid`, {
+      body: { reason, code, bankReference },
+    });
   },
 
   async listRefunds(): Promise<RefundRequest[]> {
