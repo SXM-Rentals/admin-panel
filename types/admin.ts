@@ -92,7 +92,22 @@ export type AuditAction =
   | 'staff_reset'
   | 'staff_disabled'
   | 'staff_enabled'
-  | 'password_changed';
+  | 'password_changed'
+  // NINE THE PANEL DID NOT KNOW ABOUT. The server had been writing all of these
+  // for weeks while the Audit screen looked each one up in a list of eighteen,
+  // got nothing, and drew a pill with no words in it. The same shape of mistake
+  // as the action queue's unknown kind, and the same answer: say the ones we
+  // know and fall back for the rest rather than trusting this list to be
+  // complete. See auditActionLabel in lib/labels.ts.
+  | 'staff_tier_changed'
+  | 'booking_cancelled'
+  | 'business_updated'
+  | 'business_closed'
+  | 'business_reopened'
+  | 'business_deleted'
+  | 'payout_sent'
+  | 'payout_marked_paid'
+  | 'test_records_cleared';
 
 export type AuditEntry = {
   id: string;
@@ -555,19 +570,53 @@ export type FleetRequestFile = {
   size: number;
 };
 
+// ---- A BUSINESS REMOVED ALTOGETHER ----
+// Not closing, which leaves everything in place and can be undone. This takes the
+// business and everything hanging off it off the platform, and the server says
+// exactly what went with it so the panel can repeat that rather than guess.
+export type ProviderDeleted = {
+  id: string;
+  businessName: string;
+  deleted: true;
+  removed: {
+    deposits: number;
+    refundRequests: number;
+    disputes: number;
+    paymentLines: number;
+    bookings: number;
+    payouts: number;
+    vehicles: number;
+  };
+  // What the server says it did, shown to the person as written.
+  detail: string;
+};
+
 // ---- CLEARING TEST RECORDS BEFORE THE PLATFORM IS REAL ----
 // The seven kinds of record that can be cleared, and nothing else. Some screens
 // show records with no kind of their own — refund requests go when the bookings
 // go, and a customer's points are part of what they have spent — so those screens
 // say so rather than offering a button that means something subtly different.
+// The kinds the panel names itself, on the screens where those records live. The
+// Test Data screen does not use this list: it builds its buttons from what the
+// server says it can clear, so a kind added there appears here without the panel
+// being changed. That is also why `kinds` below is a plain string.
 export type TestDataWhat =
+  | 'everything'
   | 'bookings'
   | 'payments'
   | 'payouts'
   | 'deposits'
+  | 'refunds'
+  | 'disputes'
   | 'vehicles'
   | 'providers'
-  | 'customer_spend';
+  | 'customers'
+  | 'customer_spend'
+  | 'messages'
+  | 'notifications'
+  | 'support'
+  | 'fleet_requests'
+  | 'audit_log';
 
 // WHETHER ANY OF IT IS STILL POSSIBLE, and what is keeping it so. The window is
 // open only while it is switched on AND Stripe has never run live; once live keys
@@ -577,14 +626,22 @@ export type TestDataWhat =
 export type TestDataStatus = {
   open: boolean;
   conditions: { name: string; met: boolean; sentence: string }[];
+  // EVERYTHING THE SERVER CAN CLEAR, in its own words. The Test Data screen draws
+  // one button per entry, so a kind added on the server shows up here on its own.
+  // A string rather than TestDataWhat on purpose: a union in the panel would be a
+  // promise that this list is complete, and it is the server's list, not ours.
+  kinds?: { what: string; label: string }[];
 };
 
 export type TestDataCleared = {
-  what: TestDataWhat;
+  what: string;
   // How many rows went.
   cleared: number;
   // What the server says it did, shown to the person as written.
   detail: string;
+  // Only on "everything": how many of each went, so the one button that takes
+  // the lot can still account for itself kind by kind.
+  breakdown?: Record<string, number>;
 };
 
 // ---- THE PLAYBOOK ----

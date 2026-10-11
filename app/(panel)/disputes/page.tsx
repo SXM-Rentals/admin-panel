@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, relativeDay } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -192,6 +193,17 @@ export default function DisputesPage() {
         A dispute with no owner is the one that sits for a fortnight while everybody assumes
         somebody else has it. Those are marked in red and sort to the top.
       </Note>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="disputes"
+            label="the disputes"
+            detail="Every dispute and how it was settled. The bookings behind them stay."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

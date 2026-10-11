@@ -33,7 +33,32 @@ export const auditActionLabels: Record<AuditAction, string> = {
   staff_disabled: 'Staff Access Removed',
   staff_enabled: 'Staff Access Restored',
   password_changed: 'Password Changed',
+  staff_tier_changed: 'Access Level Changed',
+  booking_cancelled: 'Booking Cancelled',
+  business_updated: 'Business Updated',
+  business_closed: 'Business Closed',
+  business_reopened: 'Business Opened Again',
+  business_deleted: 'Business Deleted',
+  payout_sent: 'Payout Sent',
+  payout_marked_paid: 'Transfer Recorded',
+  test_records_cleared: 'Test Records Cleared',
 };
+
+// ---- WHAT TO CALL AN ACTION NOBODY HERE HAS HEARD OF ----
+// The server decides what goes in the audit log and has added to it without the
+// panel knowing — nine times, as it turned out, each one drawing an empty pill on
+// the Audit screen. A log that cannot say what an entry was is not much of a log,
+// so an unknown action is shown as the server's own word with the underscores
+// taken out: "something_new" reads as "Something New" rather than as nothing.
+export function auditActionLabel(action: string): string {
+  const known = (auditActionLabels as Record<string, string | undefined>)[action];
+  if (known) return known;
+  return action
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 // ---- IDENTITY CHECK PROVIDERS ----
 export const kycProviderLabels: Record<KycProvider, string> = {

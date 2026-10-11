@@ -18,6 +18,13 @@
 // car's own listing, and nothing else. So the fleet below links straight to each
 // vehicle's listing decision, because that is where a car is actually taken down.
 //
+// AND DELETING IS A THIRD THING AGAIN, which is why all three sit together and
+// the card spells out the difference. Closing takes a business off the site and
+// can be undone tomorrow. Deleting takes the business and everything hanging off
+// it off the platform, and cannot be undone by anybody — so the server refuses it
+// outright where there is real trading behind it, and the screen offers Close
+// instead rather than arguing with that.
+//
 // STOPPING THEM TRADING AND CLOSING THEM ARE DIFFERENT THINGS, and the card that
 // holds both says so. Taking the fleet down leaves the business open: it can put
 // a car back tomorrow. Closing takes the business itself off the site, in one
@@ -35,6 +42,8 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
+import { useAdminSession } from '@/lib/auth';
+import { whyNeedsTier } from '@/lib/tiers';
 import { money, longDate } from '@/lib/format';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
@@ -120,6 +129,7 @@ export default function ProviderDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
   const router = useRouter();
+  const { staff: me } = useAdminSession();
   const searchParams = useSearchParams();
 
   const { data: provider, loading, error, refresh } = useAsyncData(() => apiClient.getProvider(id), [id]);
@@ -133,6 +143,10 @@ export default function ProviderDetailPage() {
   const [stopping, setStopping] = useState(false);
   const [closing, setClosing] = useState(false);
   const [reopening, setReopening] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  // What the server said it removed, kept so the screen can repeat it on the way
+  // out rather than saying "done" about something this large.
+  const [goneFor, setGoneFor] = useState<string | undefined>(undefined);
 
   // ---- WHAT CAN BE DONE ABOUT THIS BUSINESS ----
   // Worked out here, above the "still loading" and "could not load" branches,
@@ -207,6 +221,11 @@ export default function ProviderDetailPage() {
 
   const where = `${provider.town} · ${provider.side === 'dutch' ? 'Dutch side' : 'French side'}`;
 
+  // Owner and above, as the server requires. Hidden rather than greyed for
+  // everybody else: unlike closing, there is nothing an Administrator can usefully
+  // do with the knowledge that this button exists.
+  const mayDelete = whyNeedsTier(me?.tier, 'owner') === undefined;
+
   // Every detail row needs the same four things.
   const rowProps = {
     editable: !isClosed,
@@ -217,6 +236,14 @@ export default function ProviderDetailPage() {
 
   return (
     <>
+      {goneFor ? (
+        <div style={{ marginBottom: 'var(--space-lg)' }}>
+          <Note icon="checkmark-circle-outline" tone="ink2">
+            {goneFor}
+          </Note>
+        </div>
+      ) : null}
+
       <PageHead
         title={provider.businessName}
         description={
@@ -257,10 +284,20 @@ export default function ProviderDetailPage() {
                     }
                   : {
                       label: 'Close the business',
-                      icon: 'trash-outline',
+                      icon: 'pause-outline',
                       destructive: true,
                       onSelect: () => setClosing(true),
                     },
+                ...(mayDelete
+                  ? [
+                      {
+                        label: 'Delete the business',
+                        icon: 'trash-outline' as const,
+                        destructive: true,
+                        onSelect: () => setDeleting(true),
+                      },
+                    ]
+                  : []),
               ]}
             />
             <Button label="Back to Providers" href="/providers" variant="ghost" size="md" />
@@ -528,14 +565,33 @@ export default function ProviderDetailPage() {
                       running, a deposit is held on a customer’s card, or a payment to them is on its
                       way — it will say which.
                     </Note>
-                    <div style={{ marginTop: 'var(--space-md)' }}>
+                    <div style={{ marginTop: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
                       <Button
                         label="Close The Business"
                         variant="danger"
                         size="md"
                         onClick={() => setClosing(true)}
                       />
+                      {mayDelete ? (
+                        <Button
+                          label="Delete The Business"
+                          variant="danger"
+                          size="md"
+                          onClick={() => setDeleting(true)}
+                        />
+                      ) : null}
                     </div>
+
+                    {mayDelete ? (
+                      <div style={{ marginTop: 'var(--space-md)' }}>
+                        <Note icon="warning-outline" tone="ink2">
+                          Deleting is not closing. It takes the business, its cars and everything
+                          behind them off the platform, and nobody can undo it — not even from the
+                          database. SXM Rentals refuses it outright where there is real trading
+                          behind the business, and will say so.
+                        </Note>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </>
@@ -694,6 +750,37 @@ export default function ProviderDetailPage() {
           // would otherwise still show their cars as live.
           refresh();
           refreshVehicles();
+        }}
+      />
+
+      {/* ---- REMOVING IT ALTOGETHER ----
+          The heaviest thing on this screen, and the only one on it that nobody can
+          undo. It asks for the code like closing does; what it does NOT do is ask
+          somebody to type a word out, because that is kept for the one button on
+          Test Data that takes the whole platform. Spending it here would teach
+          people to type it without reading. */}
+      <ReasonDialog
+        open={deleting}
+        onClose={() => setDeleting(false)}
+        title={`Delete ${provider.businessName}`}
+        description="This removes the business and everything hanging off it — its cars, their paperwork, and the records of what they did. It cannot be undone by anybody, from here or from the database. Where there is real trading behind a business SXM Rentals refuses this and says so; close it instead, which keeps everything and can be undone."
+        confirmLabel="Delete the business"
+        destructive
+        confirmWithCode
+        reasonPlaceholder="e.g. Set up twice by mistake during testing — this is the empty duplicate."
+        change={{
+          subjectLabel: provider.businessName,
+          field: 'Business',
+          before: isClosed ? 'Closed' : 'Open',
+          after: 'Deleted',
+        }}
+        onConfirm={async (reason, { code }) => {
+          const result = await apiClient.deleteProvider(provider.id, reason, code ?? '');
+          // The server's own account of what went, carried to the list so the
+          // last thing seen is what happened rather than an empty screen.
+          setGoneFor(result.detail);
+          setDeleting(false);
+          router.push('/providers');
         }}
       />
 

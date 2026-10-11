@@ -38,9 +38,9 @@ import { ApiError } from '@/lib/api/errors';
 import type {
   AdminBooking,
   AdminTier,
+  ProviderDeleted,
   TestDataCleared,
   TestDataStatus,
-  TestDataWhat,
   BookingAgreement,
   FleetRequest,
   IdentityDecision,
@@ -449,6 +449,20 @@ export const apiClient = {
     return api.post<FleetRequest>(`/admin/fleet-requests/${encodeURIComponent(id)}/done`);
   },
 
+  // ---- REMOVING A BUSINESS ALTOGETHER ----
+  // NOT THE SAME AS CLOSING, and the screen is careful about the difference.
+  // Closing takes a business off the site and can be undone; this removes it and
+  // everything hanging off it, and cannot. The server refuses with `has_history`
+  // where there is real trading behind it — that refusal is the safety rail, and
+  // the panel offers Close instead rather than arguing with it.
+  //
+  // Owner and above, with the authenticator code.
+  async deleteProvider(id: string, reason: string, code: string): Promise<ProviderDeleted> {
+    return api.post<ProviderDeleted>(`/admin/providers/${encodeURIComponent(id)}/delete`, {
+      body: { reason, code },
+    });
+  },
+
   // ---- CLEARING TEST RECORDS ----
   // Whether any of this is still possible, and which conditions are keeping it so.
   // Cached for the panel by lib/test-data.ts: eight controls across six screens
@@ -465,7 +479,7 @@ export const apiClient = {
   //
   // Godfather only, with the authenticator code, and refused outright once the
   // platform has run live.
-  async clearTestData(what: TestDataWhat, reason: string, code: string): Promise<TestDataCleared> {
+  async clearTestData(what: string, reason: string, code: string): Promise<TestDataCleared> {
     return api.post<TestDataCleared>('/admin/test-data/clear', { body: { what, reason, code } });
   },
 

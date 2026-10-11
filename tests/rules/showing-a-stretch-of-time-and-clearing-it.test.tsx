@@ -219,12 +219,20 @@ describe('showing one stretch of time', () => {
   });
 });
 
+const KINDS = [
+  { what: 'everything', label: 'Everything' },
+  { what: 'deposits', label: 'Deposits' },
+  { what: 'bookings', label: 'Bookings' },
+  { what: 'audit_log', label: 'Audit log' },
+];
+
 const OPEN = {
   open: true,
   conditions: [
     { name: 'allow_test_reset', met: true, sentence: 'ALLOW_TEST_RESET is switched on.' },
     { name: 'stripe_never_live', met: true, sentence: 'Stripe has never run with live keys.' },
   ],
+  kinds: KINDS,
 };
 
 const SHUT = {
@@ -233,7 +241,17 @@ const SHUT = {
     { name: 'allow_test_reset', met: true, sentence: 'ALLOW_TEST_RESET is switched on.' },
     { name: 'stripe_never_live', met: false, sentence: 'Stripe has run with live keys, so this is shut for good.' },
   ],
+  kinds: KINDS,
 };
+
+// Opens the dialog on the row whose button says this.
+async function clearTheRowFor(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
+  const rows = await screen.findAllByRole('button', { name: /^clear$/i });
+  const row = rows.find((button) => button.closest('div')?.textContent?.match(name));
+  if (!row) throw new Error(`no row for ${name}`);
+  await user.click(row);
+  await waitFor(() => expect(document.activeElement?.tagName).toMatch(/^(INPUT|TEXTAREA)$/));
+}
 
 describe('clearing test records', () => {
   it('is offered to the Godfather and to nobody else', async () => {
@@ -286,12 +304,11 @@ describe('clearing test records', () => {
     });
     render(<TestDataPage />);
 
-    await user.click((await screen.findAllByRole('button', { name: /^clear$/i }))[0]);
-    await waitFor(() => expect(document.activeElement?.tagName).toMatch(/^(INPUT|TEXTAREA)$/));
+    await clearTheRowFor(user, /clear deposits/i);
     await user.click(screen.getByLabelText(/reason/i));
     await user.paste('Finished testing the booking flow; starting the pre-launch run clean.');
     await user.type(screen.getByLabelText(/authenticator code/i), '246810');
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /clear the deposits/i }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /clear deposits/i }));
 
     await waitFor(() =>
       expect(sentTo(server, 'POST', '/admin/test-data/clear')).toEqual({
@@ -320,16 +337,17 @@ describe('clearing test records', () => {
     });
     render(<TestDataPage />);
 
-    await user.click((await screen.findAllByRole('button', { name: /^clear$/i }))[0]);
-    await waitFor(() => expect(document.activeElement?.tagName).toMatch(/^(INPUT|TEXTAREA)$/));
+    await clearTheRowFor(user, /clear deposits/i);
     await user.click(screen.getByLabelText(/reason/i));
     await user.paste('Clearing up after the pre-launch run.');
     await user.type(screen.getByLabelText(/authenticator code/i), '246810');
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /clear the deposits/i }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /clear deposits/i }));
 
-    // Word for word: that sentence is the one that says what to do next.
-    expect(await screen.findByText(/Clear the deposits first/)).toBeInTheDocument();
-    expect(screen.getByText(/Nothing was changed/i)).toBeInTheDocument();
+    // Word for word, in the dialog — the bookings row says the same thing in its
+    // own description, so this looks where the refusal lands.
+    const dialog = screen.getByRole('dialog');
+    await waitFor(() => expect(dialog).toHaveTextContent(/Clear the deposits first/));
+    expect(dialog).toHaveTextContent(/Nothing was changed/i);
   });
 
   it('shuts for good, and says which condition shut it', async () => {
@@ -342,11 +360,66 @@ describe('clearing test records', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: /^clear$/i })[0]).toBeDisabled());
   });
 
-  it('never offers to clear the refunds, because they are not a kind of their own', async () => {
+  it('builds its buttons from what the server says it can clear', async () => {
+    // A kind nobody wrote into the panel still gets a button, because the list
+    // is the server's rather than ours.
+    serve({
+      '/admin/me': me('godfather'),
+      '/admin/test-data/status': {
+        ...OPEN,
+        kinds: [...KINDS, { what: 'something_new', label: 'Something new' }],
+      },
+    });
+    render(<TestDataPage />);
+
+    expect(await screen.findByText(/Clear something new/i)).toBeInTheDocument();
+    expect(screen.getByText(/Clear audit log/i)).toBeInTheDocument();
+  });
+
+  it('makes the one that takes everything ask for a word to be typed', async () => {
+    const user = userEvent.setup();
+    const server = serve({
+      '/admin/me': me('godfather'),
+      '/admin/test-data/status': OPEN,
+      'POST /admin/test-data/clear': {
+        what: 'everything',
+        cleared: 57,
+        detail: 'Everything cleared.',
+        breakdown: { bookings: 31, deposits: 14, audit_log: 12 },
+      },
+    });
+    render(<TestDataPage />);
+
+    await clearTheRowFor(user, /clear everything/i);
+    await user.click(screen.getByLabelText(/reason/i));
+    await user.paste('Pre-launch run finished; starting the real thing clean.');
+    await user.type(screen.getByLabelText(/authenticator code/i), '246810');
+
+    // A reason and six digits are both things a person can produce on autopilot.
+    const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: /clear everything/i });
+    expect(confirm).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/type clear to confirm/i), 'CLEAR');
+    await user.click(confirm);
+
+    await waitFor(() =>
+      expect(sentTo(server, 'POST', '/admin/test-data/clear')).toEqual({
+        what: 'everything',
+        reason: 'Pre-launch run finished; starting the real thing clean.',
+        code: '246810',
+      }),
+    );
+
+    // And it accounts for itself kind by kind rather than saying "done".
+    expect(await screen.findByText(/bookings 31/)).toBeInTheDocument();
+  });
+
+  it('says the audit log goes too, where it does', async () => {
+    const user = userEvent.setup();
     serve({ '/admin/me': me('godfather'), '/admin/test-data/status': OPEN });
     render(<TestDataPage />);
 
-    await screen.findAllByRole('button', { name: /^clear$/i });
-    expect(screen.queryByText(/clear the refund/i)).not.toBeInTheDocument();
+    await clearTheRowFor(user, /clear audit log/i);
+    expect(screen.getByRole('dialog')).toHaveTextContent(/all but one entry/i);
   });
 });

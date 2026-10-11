@@ -201,6 +201,11 @@ export default function UsersPage() {
             label="what customers have spent"
             detail="Lifetime spend, points and booking counts back to nothing. The accounts stay and can still sign in."
           />
+          <ResetControl
+            what="customers"
+            label="the customer accounts"
+            detail="The accounts themselves, and everything they did with them. Heavier than clearing what they spent."
+          />
           <ResetNote />
         </PageCard>
       </div>

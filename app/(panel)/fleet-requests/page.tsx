@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { relativeDay } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { CellStack, DataTable, type Column } from '@/components/tables/DataTable';
@@ -155,6 +156,17 @@ export default function FleetRequestsPage() {
       <Text variant="small" tone="ink3" as="p" raw>
         Oldest first, because the one waiting longest is the one to do next.
       </Text>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="fleet_requests"
+            label="the fleet set-up requests"
+            detail="Every request and the files businesses sent with them."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

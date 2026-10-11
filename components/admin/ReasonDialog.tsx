@@ -128,6 +128,16 @@ export type ReasonDialogProps = {
     placeholder?: string;
   };
 
+  // ---- A WORD TYPED OUT, FOR THE ONE BUTTON THAT TAKES EVERYTHING ----
+  // This is NOT a fourth field: nothing here is sent to the server. It is a lock
+  // on the button, and the only thing it does is make somebody stop. A reason and
+  // a six-digit code are both things a person can produce on autopilot when they
+  // meant to press the button next to this one; typing CLEAR is not.
+  //
+  // Worth exactly one use. Putting it on every destructive action would teach
+  // people to type the word without reading, which is the opposite of the point.
+  typeToConfirm?: string;
+
   // ---- YOUR AUTHENTICATOR CODE, FOR THE CHANGES THAT DECIDE WHO GETS IN ----
   // Adding a member of staff, resetting one, taking one's access away. A session
   // left open on somebody's desk is enough to approve a refund; it is
@@ -157,6 +167,7 @@ export function ReasonDialog({
   amount,
   customerNote,
   reference,
+  typeToConfirm,
   confirmWithCode = false,
   onConfirm,
 }: ReasonDialogProps) {
@@ -166,6 +177,7 @@ export function ReasonDialog({
   const [amountText, setAmountText] = useState('');
   const [note, setNote] = useState('');
   const [referenceText, setReferenceText] = useState('');
+  const [typed, setTyped] = useState('');
   const [code, setCode] = useState('');
   const [touched, setTouched] = useState(false);
   const [working, setWorking] = useState(false);
@@ -239,8 +251,14 @@ export function ReasonDialog({
       ? undefined
       : 'Enter the reference the bank gave it — our record is matched to theirs by this alone.';
 
+  const typedProblem =
+    !typeToConfirm || typed.trim() === typeToConfirm
+      ? undefined
+      : `Type ${typeToConfirm} to confirm this.`;
+
   const blocked =
     whyNoChanges !== undefined ||
+    typedProblem !== undefined ||
     tooShort ||
     amountProblem !== undefined ||
     noteProblem !== undefined ||
@@ -416,6 +434,19 @@ export function ReasonDialog({
               customerNote.hint ??
               'Sent to them as written. Not in the audit log — the reason above is what is recorded.'
             }
+          />
+        ) : null}
+
+        {typeToConfirm ? (
+          <Input
+            label={`Type ${typeToConfirm} to confirm`}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+            onBlur={() => setTouched(true)}
+            placeholder={typeToConfirm}
+            error={touched ? typedProblem : undefined}
+            hint="Not sent anywhere. It is here to make this one take a moment longer than the others."
+            required
           />
         ) : null}
 

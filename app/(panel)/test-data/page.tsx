@@ -3,25 +3,32 @@
 // SXM Rentals — Created by Giordano Bertin-Maurice
 // Copyright (c) 2026 Giordano Bertin-Maurice. All rights reserved.
 // WHAT THIS FILE DOES: The Godfather's screen for trying the platform out for real
-// and then clearing up after it — every kind of test record that can go, in one
-// place, with the order they have to go in and what is keeping the window open.
+// and then clearing up after it — everything that can go, in one place, with the
+// order it has to go in and what is keeping the window open.
 //
-// WHY A SCREEN AS WELL AS THE BUTTONS ON EACH LIST. They are for different
-// moments. The button on the Bookings screen is for "I have just made six test
-// bookings, clear those". This is for standing back before a launch and seeing
-// everything that can go — which matters because the dangerous mistake here is not
-// pressing one button, it is pressing five and losing track of which.
+// THE BUTTONS ARE BUILT FROM WHAT THE SERVER SAYS IT CAN CLEAR, not from a list
+// kept here. The server already added nine kinds in one go; a list in the panel is
+// a list that is wrong the day after somebody adds the tenth. So this screen draws
+// one button per kind the server names, using the server's own words for it.
 //
-// THE ORDER IS NOT A SUGGESTION. Some records hold others up, and the server
-// refuses rather than taking more than was asked for — deposits before bookings,
-// bookings before payouts, and so on. That refusal names what to clear first, and
-// the order is printed here so nobody has to discover it one refusal at a time.
+// CLEAR EVERYTHING IS SEPARATE, AT THE TOP, AND ASKS FOR A WORD TO BE TYPED. The
+// others take a reason and a six-digit code, both of which a person can produce on
+// autopilot when they meant to press the button next to this one. Typing CLEAR is
+// the only thing on this screen that cannot be done by muscle memory, and it is
+// spent here rather than on any of the others — put it on all of them and people
+// learn to type it without reading.
 //
-// WINDING BACK TO A DAY IS NOT HERE, AND THAT IS THE ANSWER RATHER THAN AN
-// OMISSION. It was asked for and the backend's reply was that it is a database
+// WHAT SURVIVES, NOW THAT THE AUDIT LOG DOES NOT. Staff accounts and the platform
+// settings are never cleared by any of this. The audit log used to be on that list
+// and no longer is: it goes with its own clear or with Everything, and always
+// keeps one entry saying who cleared it, when, how many and why. That entry is the
+// point — a log that can vanish without trace is not a log, and one that leaves a
+// note of its own clearing still is.
+//
+// WINDING BACK TO A DAY IS NOT HERE, AND THAT IS AN ANSWER RATHER THAN AN
+// OMISSION. It was asked for; the backend's reply was that it is a database
 // procedure on Neon rather than anything the panel can call. A button that cannot
-// work is worse than a documented procedure somebody has to ask for, so there is no
-// button — only this paragraph saying where it lives.
+// work is worse than a paragraph saying where the thing actually lives.
 
 import React from 'react';
 import { useAsyncData } from '@/hooks/useAsyncData';
@@ -35,10 +42,30 @@ import { Note } from '@/components/admin/shared';
 import { Icon, Skeleton, StatusPill, Text } from '@/components/ui';
 import styles from '@/components/admin/admin.module.css';
 
+// What each kind means, where the server's own label does not say the part that
+// matters. Anything the server names that is not in here is drawn with its own
+// label and no line underneath, which is how a kind added tomorrow still works.
+const SAYS: Record<string, string> = {
+  bookings: 'Every booking and its history, and the refund requests that belong to them. Clear the deposits first.',
+  payments: 'Charges, refunds and commission. The bookings stay. Can go at any point.',
+  payouts: 'What businesses were owed and what was sent. The bookings behind them stay.',
+  deposits: 'Every deposit held, released and claimed. These go before the bookings can.',
+  refunds: 'Refund requests and their decisions. The payments they point at stay.',
+  disputes: 'Every dispute and how it was settled.',
+  vehicles: 'Every vehicle a business added, with its listing decisions and paperwork.',
+  providers: 'Every rental business and its fleet.',
+  customers: 'Customer accounts themselves. Everything they did goes with them.',
+  customer_spend: 'Lifetime spend, points and booking counts back to nothing. The accounts stay and can still sign in.',
+  messages: 'Messages between customers and businesses on their bookings.',
+  notifications: 'Everything the apps have pushed to anybody.',
+  support: 'Conversations between customers and us.',
+  fleet_requests: 'Businesses that asked us to put their cars on for them, and the files they sent.',
+  audit_log: 'The record of what staff did — except one entry saying it was cleared, by whom and why.',
+};
+
 export default function TestDataPage() {
   const { staff: me } = useAdminSession();
-  const notYours = whyNeedsTier(me?.tier, 'godfather');
-  const mine = notYours === undefined;
+  const mine = whyNeedsTier(me?.tier, 'godfather') === undefined;
 
   const { data: status, loading, error, refresh } = useAsyncData(
     () => (mine ? testDataStatus() : Promise.resolve(undefined)),
@@ -61,7 +88,14 @@ export default function TestDataPage() {
     );
   }
 
-  if (error) return <LoadFailed title="Test Data" what="Whether records can be cleared" error={error} onRetry={refresh} />;
+  if (error) {
+    return <LoadFailed title="Test Data" what="Whether records can be cleared" error={error} onRetry={refresh} />;
+  }
+
+  // Everything the server will clear, in its order, minus the one that takes the
+  // lot — that has its own button and its own ceremony above.
+  const kinds = (status?.kinds ?? []).filter((kind) => kind.what !== 'everything');
+  const takesTheLot = (status?.kinds ?? []).find((kind) => kind.what === 'everything');
 
   return (
     <>
@@ -71,9 +105,9 @@ export default function TestDataPage() {
       />
 
       {/* ---- WHAT IS KEEPING THIS OPEN ----
-          First on the screen, because it is the thing that decides whether
-          anything below it will work, and because it will one day say "closed"
-          and somebody will need to know why without asking a developer. */}
+          First on the screen, because it decides whether anything below it will
+          work, and because one day it will say "closed" and somebody will need to
+          know why without asking a developer. */}
       <PageCard
         title="Whether This Is Still Possible"
         subtitle={status ? (status.open ? 'Open' : 'Closed for good') : undefined}
@@ -117,44 +151,50 @@ export default function TestDataPage() {
         )}
       </PageCard>
 
+      {/* ---- THE ONE THAT TAKES THE LOT ----
+          On its own, above everything, and the only thing in the panel that asks
+          for a word to be typed out. */}
+      {takesTheLot ? (
+        <div style={{ marginTop: 'var(--space-lg)' }}>
+          <PageCard title="Start Completely Again" subtitle="Everything below, in one go">
+            <Note icon="warning-outline" tone="ink2">
+              This clears every kind of record on this screen at once — bookings, money, cars,
+              businesses, customers, messages and the audit log — and tells you how many of each
+              went. Staff accounts and the platform settings stay, and the audit log keeps one entry
+              saying you did this. Nothing else survives it, and nobody can undo it.
+            </Note>
+            <div style={{ marginTop: 'var(--space-md)' }}>
+              <ResetControl
+                what="everything"
+                label={takesTheLot.label.toLowerCase()}
+                detail="Every kind of record below, in one go. Only staff accounts and settings are left."
+                typeToConfirm="CLEAR"
+              />
+            </div>
+          </PageCard>
+        </div>
+      ) : null}
+
       <div className={styles.detailGrid} style={{ marginTop: 'var(--space-lg)' }}>
         <div className={styles.detailStack}>
           <PageCard title="Clear One Thing At A Time" subtitle="Each one leaves the others alone">
-            <ResetControl
-              what="deposits"
-              label="the deposits"
-              detail="Every deposit held, released and claimed. The bookings stay."
-            />
-            <ResetControl
-              what="bookings"
-              label="the bookings"
-              detail="Every booking and its history, and the refund requests that belong to them. Payments and payouts stay."
-            />
-            <ResetControl
-              what="payouts"
-              label="the payouts"
-              detail="What businesses were owed and what was sent. The bookings behind them stay."
-            />
-            <ResetControl
-              what="vehicles"
-              label="the cars"
-              detail="Every vehicle a business added, with its listing decisions and paperwork. The businesses stay."
-            />
-            <ResetControl
-              what="providers"
-              label="the businesses"
-              detail="Every rental business and its fleet. Staff accounts and the audit log stay."
-            />
-            <ResetControl
-              what="payments"
-              label="the payments ledger"
-              detail="Charges, refunds and commission. The bookings stay. Can go at any point."
-            />
-            <ResetControl
-              what="customer_spend"
-              label="what customers have spent"
-              detail="Lifetime spend, points and booking counts back to nothing. The accounts themselves stay, and they can still sign in."
-            />
+            {loading ? (
+              <Skeleton height={240} />
+            ) : kinds.length === 0 ? (
+              <Note>The server did not say what it can clear.</Note>
+            ) : (
+              kinds.map((kind) => (
+                <ResetControl
+                  key={kind.what}
+                  what={kind.what}
+                  label={kind.label.toLowerCase()}
+                  // The server's label is the name; this is the consequence. A
+                  // kind nobody here has heard of gets the name and no line,
+                  // which is better than a line that guesses.
+                  detail={SAYS[kind.what] ?? 'Clears these records and nothing else.'}
+                />
+              ))
+            )}
           </PageCard>
         </div>
 
@@ -162,7 +202,8 @@ export default function TestDataPage() {
           <PageCard title="The Order They Go In">
             <Note>
               Some records hold others up. This order always works, and anything refused will say
-              what to clear first rather than taking more than you asked for:
+              what to clear first — or tell you to use Everything — rather than taking more than you
+              asked for:
             </Note>
             <div style={{ marginTop: 'var(--space-md)' }}>
               <Text variant="label" as="p" raw>
@@ -170,8 +211,7 @@ export default function TestDataPage() {
               </Text>
               <div style={{ marginTop: 'var(--space-xs)' }}>
                 <Text variant="small" tone="ink3" as="p" raw>
-                  The payments ledger and what customers have spent can go at any point, in any
-                  order.
+                  The rest can go at any point, in any order.
                 </Text>
               </div>
             </div>
@@ -179,18 +219,23 @@ export default function TestDataPage() {
 
           <PageCard title="What Is Never Cleared">
             <Note>
-              Staff accounts and the audit log survive all of this. The log is the record of what was
-              done to this platform — including each of these clearances, under the name of whoever
-              pressed it — and a record the person it is about can erase is not a record.
+              Staff accounts and the platform settings survive all of this, including Everything.
             </Note>
+            <div style={{ marginTop: 'var(--space-md)' }}>
+              <Note icon="warning-outline" tone="ink2">
+                The audit log is no longer on that list. It goes with its own clear or with
+                Everything — but it always keeps one entry saying who cleared it, when, how many
+                went and why. A log that can vanish without trace would not be a log; one that
+                leaves a note of its own clearing still is.
+              </Note>
+            </div>
           </PageCard>
 
           <PageCard title="Winding Back To A Day">
             <Note icon="warning-outline" tone="ink2">
               There is no button for this and there will not be one. Putting the platform back to how
               it stood on a particular day is a database procedure on Neon rather than anything the
-              panel can ask for — ask whoever looks after the database. A button that cannot work
-              would be worse than this paragraph.
+              panel can ask for — ask whoever looks after the database.
             </Note>
           </PageCard>
         </div>

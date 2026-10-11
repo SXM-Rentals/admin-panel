@@ -41,14 +41,21 @@ export function ResetControl({
   what,
   label,
   detail,
+  typeToConfirm,
 }: {
-  // Exactly what the server will be asked to clear. Only these seven exist; a
-  // screen whose records have no `what` of their own does not get one of these.
-  what: TestDataWhat;
+  // What the server will be asked to clear. A plain string, not a union: the
+  // Test Data screen builds its buttons from the kinds the SERVER says it can
+  // clear, so a kind added there works here without the panel being changed.
+  // The screens that name a kind themselves still get it checked, because they
+  // pass one of TestDataWhat.
+  what: TestDataWhat | string;
   // What it is called in this office: "the bookings", "what customers have spent".
   label: string;
   // The consequence, in one line, written for somebody about to press it.
   detail: string;
+  // A word that has to be typed out before the button works. Kept for the one
+  // button that takes everything; see ReasonDialog.
+  typeToConfirm?: string;
 }) {
   const { staff: me } = useAdminSession();
   const mine = whyNeedsTier(me?.tier, 'godfather') === undefined;
@@ -94,10 +101,15 @@ export function ResetControl({
         open={asking}
         onClose={() => setAsking(false)}
         title={`Clear ${label}`}
-        description={`${detail} This destroys those records rather than hiding them, and there is no undoing it from the panel. Everything else stays, including the audit log — this very clearance appears in it under your name.`}
+        description={`${detail} This destroys those records rather than hiding them, and there is no undoing it from the panel. ${
+          what === 'audit_log' || what === 'everything'
+            ? 'The audit log goes with it — all but one entry, which says that you cleared it, when, how many went and why.'
+            : 'Everything else stays, including the audit log, where this clearance appears under your name.'
+        }`}
         confirmLabel={`Clear ${label}`}
         destructive
         confirmWithCode
+        typeToConfirm={typeToConfirm}
         reasonPlaceholder="e.g. Finished testing the booking flow end to end; starting the pre-launch run clean."
         change={{
           subjectLabel: 'SXM Rentals · test records',
@@ -108,8 +120,16 @@ export function ResetControl({
         onConfirm={async (reason, { code }) => {
           try {
             const result = await apiClient.clearTestData(what, reason, code ?? '');
-            // The server's own sentence about what it did, shown as written.
-            setDone(result.detail);
+            // The server's own sentence about what it did, shown as written —
+            // and, where it took several kinds at once, how many of each, so the
+            // one button that takes the lot still accounts for itself.
+            const breakdown = result.breakdown
+              ? Object.entries(result.breakdown)
+                  .filter(([, count]) => count > 0)
+                  .map(([kind, count]) => `${kind.replace(/_/g, ' ')} ${count}`)
+                  .join(' · ')
+              : '';
+            setDone(breakdown ? `${result.detail} (${breakdown})` : result.detail);
             setAsking(false);
           } finally {
             // Whether it went through or was refused, what is possible next may
@@ -141,25 +161,9 @@ export function ResetNote() {
       <Note icon="warning-outline" tone="ink2">
         {status && !status.open
           ? 'Clearing test records is closed for good on this platform — see Test Data for which condition shut it.'
-          : 'Each one takes a written reason and your authenticator code, and clears only what it names. Some have to go in a certain order; the server will say so rather than taking more than you asked for. See Test Data.'}
+          : 'Each one takes a written reason and your authenticator code, and clears only what it names. Some have to go in a certain order; the server will say so — or point you at Everything — rather than taking more than you asked for. See Test Data.'}
       </Note>
     </div>
-  );
-}
-
-// ---- A SCREEN WHOSE RECORDS HAVE NO KIND OF THEIR OWN ----
-// Refund requests belong to the bookings and go when those go. A "clear the
-// refunds" button here would either do nothing or quietly clear the bookings, and
-// both are worse than a sentence saying what is actually true.
-export function RefundsAreClearedWithBookings() {
-  const { staff: me } = useAdminSession();
-  if (whyNeedsTier(me?.tier, 'godfather') !== undefined) return null;
-
-  return (
-    <Note icon="warning-outline" tone="ink2">
-      Refund requests are not cleared on their own — they belong to the bookings and go when those
-      go. Clear the bookings from the Bookings screen or from Test Data, after the deposits.
-    </Note>
   );
 }
 

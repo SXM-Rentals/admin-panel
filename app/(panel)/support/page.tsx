@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { relativeDay } from '@/lib/format';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { CellStack, DataTable, type Column } from '@/components/tables/DataTable';
@@ -122,6 +123,17 @@ export default function SupportPage() {
         Messages about one booking still sit in the customer&rsquo;s own conversation. The booking they
         wrote from is named on each message.
       </Text>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="support"
+            label="the conversations"
+            detail="Everything customers have written to us, and everything we wrote back."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }

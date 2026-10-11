@@ -21,7 +21,7 @@ import React, { useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, relativeDay, shortDate } from '@/lib/format';
-import { RefundsAreClearedWithBookings } from '@/components/admin/ResetControl';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -263,7 +263,12 @@ export default function RefundsQueuePage() {
 
       <div style={{ marginTop: 'var(--space-lg)' }}>
         <PageCard title="Test Records">
-          <RefundsAreClearedWithBookings />
+          <ResetControl
+            what="refunds"
+            label="the refund requests"
+            detail="Every request and its decision. The payments they point at stay, and so do the bookings."
+          />
+          <ResetNote />
         </PageCard>
       </div>
     </>

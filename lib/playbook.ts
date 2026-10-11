@@ -336,6 +336,10 @@ export const backendRoutes: { group: string; purpose: string }[] = [
     group: 'POST /admin/providers/:id/reopen',
     purpose: 'Opening a closed business again. Its cars stay off the site until each is put back',
   },
+  {
+    group: 'POST /admin/providers/:id/delete',
+    purpose: 'Removing a business and everything behind it. Owner access, a reason and your code',
+  },
   { group: 'POST /admin/providers/:id/verification', purpose: 'The SXM Verified decision, with a reason' },
 
   // ---- CLEARING TEST RECORDS, BEFORE THE PLATFORM IS REAL ----

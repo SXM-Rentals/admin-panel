@@ -24,7 +24,8 @@ import React, { useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { stamp } from '@/lib/format';
-import { auditActionLabels } from '@/lib/labels';
+import { auditActionLabel, auditActionLabels } from '@/lib/labels';
+import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -99,7 +100,7 @@ export default function AuditLogPage() {
       sortValue: (e) => e.action,
       cell: (e) => (
         <CellStack
-          title={<StatusPill label={auditActionLabels[e.action]} tone={toneFor(e.action)} />}
+          title={<StatusPill label={auditActionLabel(e.action)} tone={toneFor(e.action)} />}
           detail={e.field}
         />
       ),
@@ -207,6 +208,17 @@ export default function AuditLogPage() {
         Entries made while this tab has been open are held in memory and disappear on a refresh
         — the log is not connected to a backend yet. Everything above them is seeded history.
       </Note>
+
+      <div style={{ marginTop: 'var(--space-lg)' }}>
+        <PageCard title="Test Records">
+          <ResetControl
+            what="audit_log"
+            label="the audit log"
+            detail="The record of what staff did — except one entry saying you cleared it, when and why."
+          />
+          <ResetNote />
+        </PageCard>
+      </div>
     </>
   );
 }
@@ -219,7 +231,12 @@ function toneFor(action: AuditAction): 'neutral' | 'success' | 'warning' | 'dang
     action === 'verification_rejected' ||
     action === 'refund_denied' ||
     action === 'deposit_claimed' ||
-    action === 'staff_disabled'
+    action === 'staff_disabled' ||
+    action === 'business_closed' ||
+    action === 'business_deleted' ||
+    action === 'booking_cancelled' ||
+    // Clearing records is the only entry in this log that is about the log.
+    action === 'test_records_cleared'
   ) {
     return 'danger';
   }
@@ -266,7 +283,7 @@ function downloadCsv(rows: AuditEntry[]): void {
       entry.at,
       entry.staffName,
       entry.subjectLabel,
-      auditActionLabels[entry.action],
+      auditActionLabel(entry.action),
       entry.field,
       entry.before,
       entry.after,
