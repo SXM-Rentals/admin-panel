@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, relativeDay, shortDate, vehicleClassLabels } from '@/lib/format';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -164,6 +165,14 @@ export default function VehiclesPage() {
           rows={rows}
           columns={columns}
           rowKey={(v) => v.id}
+          rowTail={(v) => (
+            <RowDelete
+              what="vehicles"
+              id={v.id}
+              label={`${v.make} ${v.model} ${v.year}`}
+              onDone={refresh}
+            />
+          )}
           rowMuted={(v) => v.listingStatus === 'suspended'}
           loading={loading}
           initialSort={{ columnId: 'listing', direction: 'asc' }}

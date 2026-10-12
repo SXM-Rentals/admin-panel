@@ -349,6 +349,11 @@ export const backendRoutes: { group: string; purpose: string }[] = [
     purpose: 'Clearing one kind of test record. Godfather only, with a reason and your code',
   },
 
+  {
+    group: 'POST /admin/test-data/delete',
+    purpose: 'Removing one test record. Godfather only, with a reason and your code',
+  },
+
   // ---- MESSAGES AND IDENTITY ----
   { group: 'GET /admin/support', purpose: 'Customers waiting for an answer, oldest wait first' },
   { group: 'GET /admin/support/:id', purpose: 'One customer\u2019s whole conversation' },

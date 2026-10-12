@@ -22,6 +22,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, relativeDay, shortDate } from '@/lib/format';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -181,6 +182,14 @@ export default function RefundsQueuePage() {
           rows={rows}
           columns={columns}
           rowKey={(r) => r.id}
+          rowTail={(r) => (
+            <RowDelete
+              what="refunds"
+              id={r.id}
+              label={`the refund request on ${r.bookingRef}`}
+              onDone={refresh}
+            />
+          )}
           rowMuted={(r) => r.status !== 'pending'}
           loading={loading}
           initialSort={{ columnId: 'requested', direction: 'asc' }}

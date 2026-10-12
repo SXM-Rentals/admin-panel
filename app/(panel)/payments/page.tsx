@@ -21,6 +21,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, stamp } from '@/lib/format';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -200,6 +201,14 @@ export default function PaymentsPage() {
           rows={rows}
           columns={columns}
           rowKey={(e) => e.id}
+          rowTail={(e) => (
+            <RowDelete
+              what="payments"
+              id={e.id}
+              label={`the ${e.kind} line for ${e.bookingRef}`}
+              onDone={refresh}
+            />
+          )}
           loading={loading}
           initialSort={{ columnId: 'at', direction: 'desc' }}
           pageSize={25}

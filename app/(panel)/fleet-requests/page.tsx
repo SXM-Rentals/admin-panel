@@ -22,6 +22,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { relativeDay } from '@/lib/format';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { CellStack, DataTable, type Column } from '@/components/tables/DataTable';
@@ -125,6 +126,14 @@ export default function FleetRequestsPage() {
           rows={rows}
           columns={columns}
           rowKey={(r) => r.id}
+          rowTail={(r) => (
+            <RowDelete
+              what="fleet_requests"
+              id={r.id}
+              label={`${r.businessName}’s fleet request`}
+              onDone={refresh}
+            />
+          )}
           rowMuted={(r) => r.status === 'done'}
           loading={loading}
           initialSort={{ columnId: 'asked', direction: 'asc' }}

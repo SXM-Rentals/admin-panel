@@ -48,6 +48,11 @@ export type DataTableProps<Row> = {
   rowMuted?: (row: Row) => boolean;
   // The Modify / View buttons at the end of each row.
   rowActions?: (row: Row) => React.ReactNode;
+  // Something that goes at the END of the actions, whatever the screen put there.
+  // It exists so a control that belongs on every list — the Godfather's delete —
+  // is one line per screen rather than a change to eleven different rowActions,
+  // each shaped differently.
+  rowTail?: (row: Row) => React.ReactNode;
   // Which column to sort by when the screen first opens.
   initialSort?: { columnId: string; direction: 'asc' | 'desc' };
   // What to say when there is nothing. Worth writing properly per screen: "No
@@ -67,6 +72,7 @@ export function DataTable<Row>({
   rowKey,
   rowMuted,
   rowActions,
+  rowTail,
   initialSort,
   emptyTitle = 'Nothing here',
   emptyMessage,
@@ -179,7 +185,7 @@ export function DataTable<Row>({
                   </th>
                 );
               })}
-              {rowActions ? (
+              {rowActions || rowTail ? (
                 <th style={{ textAlign: 'right' }}>
                   {/* The actions column has no useful heading, but an empty one
                       would be announced as a blank column. */}
@@ -197,9 +203,12 @@ export function DataTable<Row>({
                     {column.cell(row)}
                   </td>
                 ))}
-                {rowActions ? (
+                {rowActions || rowTail ? (
                   <td>
-                    <div className={styles.rowActions}>{rowActions(row)}</div>
+                    <div className={styles.rowActions}>
+                      {rowActions?.(row)}
+                      {rowTail?.(row)}
+                    </div>
                   </td>
                 ) : null}
               </tr>

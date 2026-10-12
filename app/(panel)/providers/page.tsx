@@ -18,6 +18,8 @@ import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money } from '@/lib/format';
+import { useAdminSession } from '@/lib/auth';
+import { whyNeedsTier } from '@/lib/tiers';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -30,6 +32,8 @@ type StatusFilter = 'all' | VerificationStatus;
 type SideFilter = 'all' | 'dutch' | 'french';
 
 export default function ProvidersPage() {
+  const { staff: me } = useAdminSession();
+  const mayDelete = whyNeedsTier(me?.tier, 'owner') === undefined;
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
@@ -221,10 +225,23 @@ export default function ProvidersPage() {
                       }
                     : {
                         label: 'Close the business',
-                        icon: 'trash-outline',
+                        icon: 'pause-outline',
                         destructive: true,
                         onSelect: () => router.push(`/providers/${p.id}?close=1`),
                       },
+                  // Removing it altogether is a third thing, not a heavier close:
+                  // Owner and above, hidden for everybody else, and opened on the
+                  // business itself so the fleet it would take is in front of you.
+                  ...(mayDelete
+                    ? [
+                        {
+                          label: 'Delete the business',
+                          icon: 'trash-outline' as const,
+                          destructive: true,
+                          onSelect: () => router.push(`/providers/${p.id}?delete=1`),
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </>

@@ -22,6 +22,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, relativeDay, shortDate } from '@/lib/format';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -229,6 +230,14 @@ function BookingsList() {
           rows={rows}
           columns={columns}
           rowKey={(b) => b.id}
+          rowTail={(b) => (
+            <RowDelete
+              what="bookings"
+              id={b.id}
+              label={`booking ${b.reference}`}
+              onDone={refresh}
+            />
+          )}
           rowMuted={(b) => b.status === 'cancelled'}
           loading={loading}
           initialSort={{ columnId: 'booked', direction: 'desc' }}

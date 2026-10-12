@@ -21,6 +21,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, shortDate } from '@/lib/format';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -168,6 +169,14 @@ export default function UsersPage() {
           rows={rows}
           columns={columns}
           rowKey={(u) => u.id}
+          rowTail={(u) => (
+            <RowDelete
+              what="customers"
+              id={u.id}
+              label={`${u.firstName} ${u.lastName}’s account`}
+              onDone={refresh}
+            />
+          )}
           rowMuted={(u) => Boolean(u.deletedAt)}
           loading={loading}
           initialSort={{ columnId: 'joined', direction: 'desc' }}

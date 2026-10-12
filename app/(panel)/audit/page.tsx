@@ -26,6 +26,7 @@ import { useAsyncData } from '@/hooks/useAsyncData';
 import { stamp } from '@/lib/format';
 import { auditActionLabel, auditActionLabels } from '@/lib/labels';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -196,6 +197,19 @@ export default function AuditLogPage() {
           rows={rows}
           columns={columns}
           rowKey={(e) => e.id}
+          rowTail={(e) => (
+            <RowDelete
+              what="audit_log"
+              id={e.id}
+              label={`the audit entry “${auditActionLabel(e.action)}” for ${e.subjectLabel}`}
+              onDone={refresh}
+            unavailable={
+              (e.action === 'test_records_cleared' || (e.action as string) === 'audit_entry_deleted')
+              ? 'This entry is the note of a clearing. It goes only when the whole log is cleared.'
+              : undefined
+            }
+            />
+          )}
           loading={loading}
           initialSort={{ columnId: 'at', direction: 'desc' }}
           pageSize={25}

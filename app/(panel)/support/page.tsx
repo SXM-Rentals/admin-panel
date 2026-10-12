@@ -21,6 +21,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { relativeDay } from '@/lib/format';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { CellStack, DataTable, type Column } from '@/components/tables/DataTable';
@@ -94,6 +95,14 @@ export default function SupportPage() {
           rows={rows}
           columns={columns}
           rowKey={(c) => c.customerId}
+          rowTail={(c) => (
+            <RowDelete
+              what="support"
+              id={c.customerId}
+              label={`${c.customerName || 'this customer'}’s conversation`}
+              onDone={refresh}
+            />
+          )}
           rowMuted={(c) => !c.waitingForStaff}
           loading={loading}
           // Waiting first, then the longest wait: the same order the server sent.

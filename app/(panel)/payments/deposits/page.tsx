@@ -25,6 +25,7 @@ import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money, shortDate } from '@/lib/format';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
@@ -194,6 +195,14 @@ export default function DepositsLedgerPage() {
           rows={rows}
           columns={columns}
           rowKey={(d) => d.id}
+          rowTail={(d) => (
+            <RowDelete
+              what="deposits"
+              id={d.id}
+              label={`the deposit on ${d.bookingRef}`}
+              onDone={refresh}
+            />
+          )}
           loading={loading}
           initialSort={{ columnId: 'authorized', direction: 'desc' }}
           pageSize={25}

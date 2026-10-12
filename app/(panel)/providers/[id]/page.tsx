@@ -195,13 +195,18 @@ export default function ProviderDetailPage() {
       ? 'close'
       : searchParams?.get('reopen') === '1'
         ? 'reopen'
-        : null;
+        : searchParams?.get('delete') === '1'
+          ? 'delete'
+          : null;
 
   useEffect(() => {
     if (!asked || !provider || fleetLoading) return;
     if (asked === 'stop' && canStopTrading) setStopping(true);
     if (asked === 'close' && !isClosed) setClosing(true);
     if (asked === 'reopen' && isClosed) setReopening(true);
+    // Owner and above only, like the button itself: a link cannot be used to
+    // open a dialog the person would not have been offered.
+    if (asked === 'delete' && whyNeedsTier(me?.tier, 'owner') === undefined) setDeleting(true);
     router.replace(`/providers/${provider.id}`);
   }, [asked, provider, fleetLoading, canStopTrading, isClosed, router]);
 

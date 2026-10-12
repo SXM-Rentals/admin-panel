@@ -39,6 +39,7 @@ import type {
   AdminBooking,
   AdminTier,
   ProviderDeleted,
+  RecordDeleted,
   TestDataCleared,
   TestDataStatus,
   BookingAgreement,
@@ -481,6 +482,17 @@ export const apiClient = {
   // platform has run live.
   async clearTestData(what: string, reason: string, code: string): Promise<TestDataCleared> {
     return api.post<TestDataCleared>('/admin/test-data/clear', { body: { what, reason, code } });
+  },
+
+  // ---- REMOVING ONE RECORD ----
+  // The single-row version of clearTestData: one booking, one payment line, one
+  // audit entry. Same rules — Godfather only, a reason and the authenticator code,
+  // and only while the window for clearing test records is open.
+  //
+  // `what` is the kind exactly as the test-data status names it, and `id` is the
+  // row's own id. Nothing else is touched.
+  async deleteRecord(what: string, id: string, reason: string, code: string): Promise<RecordDeleted> {
+    return api.post<RecordDeleted>('/admin/test-data/delete', { body: { what, id, reason, code } });
   },
 
   // ---- ANALYTICS ----

@@ -35,6 +35,7 @@ import { useAdminSession } from '@/lib/auth';
 import { dateRange, longDate, money } from '@/lib/format';
 import { whyNeedsTier } from '@/lib/tiers';
 import { ResetControl, ResetNote } from '@/components/admin/ResetControl';
+import { RowDelete } from '@/components/admin/RowDelete';
 import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { CellStack, DataTable, type Column } from '@/components/tables/DataTable';
@@ -177,6 +178,14 @@ export default function PayoutsPage() {
           rows={rows}
           columns={columns}
           rowKey={(p) => p.id}
+          rowTail={(p) => (
+            <RowDelete
+              what="payouts"
+              id={p.id}
+              label={`payout ${p.reference}`}
+              onDone={refresh}
+            />
+          )}
           rowMuted={(p) => p.status === 'paid'}
           loading={loading}
           initialSort={{ columnId: 'period', direction: 'desc' }}

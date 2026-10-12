@@ -630,7 +630,19 @@ export type TestDataStatus = {
   // one button per entry, so a kind added on the server shows up here on its own.
   // A string rather than TestDataWhat on purpose: a union in the panel would be a
   // promise that this list is complete, and it is the server's list, not ours.
-  kinds?: { what: string; label: string }[];
+  //
+  // `single` says whether it can also delete ONE record of that kind, which is
+  // what the Delete button at the end of a row waits for. Absent means it cannot,
+  // and the button stays greyed with the reason.
+  kinds?: { what: string; label: string; single?: boolean }[];
+};
+
+// One record removed, and what the server says it did.
+export type RecordDeleted = {
+  what: string;
+  id: string;
+  deleted: true;
+  detail: string;
 };
 
 export type TestDataCleared = {
