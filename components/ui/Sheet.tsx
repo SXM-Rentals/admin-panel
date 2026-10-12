@@ -20,8 +20,18 @@
 //      it closes — otherwise the keyboard is dumped back at the top of the page.
 //   4. The page behind stops scrolling, so spinning the wheel does not silently
 //      scroll something else away underneath.
+//
+// AND IT IS DRAWN ON THE PAGE ITSELF, NOT WHERE IT WAS WRITTEN. A panel that opens
+// from a button inside a table row used to be drawn inside that row, and a table is
+// a place where the page's own rules are against it: the table scrolls sideways, its
+// header sticks, and anything inside it is held in the table's own layering. The panel
+// then appeared half cut off with the column headings painted over it and the lower
+// half — the authenticator code, the confirm button — behind the rows, unclickable.
+// Drawing it directly on the page means nothing it was opened from can trap it, which
+// is also why no screen has to know whether its button happens to be in a table.
 
 import React, { useCallback, useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { cx } from '@/lib/utils';
 import { Text } from './Text';
 import { Button } from './Button';
@@ -171,8 +181,11 @@ export function Sheet({
   }, [open]);
 
   if (!open) return null;
+  // Nothing to draw it on while the page is still being built on the server. An open
+  // panel only ever comes from somebody pressing something, so this is never seen.
+  if (typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
       className={cx(styles.backdrop, placement === 'side' && styles.backdropSide)}
       // Clicking the dimmed area closes the panel — but only the dimmed area
@@ -220,7 +233,8 @@ export function Sheet({
 
         {footer ? <div className={styles.footer}>{footer}</div> : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
