@@ -929,3 +929,76 @@
   align-items: flex-start;
   gap: var(--space-sm);
 }
+
+/* ==================================================================
+   SAVED VERSIONS
+   What happened when records were put back, the badges on a kind's
+   tab, and one saved record shown exactly as it was.
+   ================================================================== */
+.restoreResult {
+  padding: var(--space-lg);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+
+.restoreHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.restoreHead > p {
+  flex: 1;
+  min-width: 0;
+}
+
+.restoreList {
+  margin: var(--space-md) 0 0;
+  padding-left: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.restoreKinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+/* A count inside a kind's tab, and — in the warning colour — how many of those
+   are gone from the platform now. */
+.chipBadge,
+.chipBadgeWarn {
+  margin-left: var(--space-xs);
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--tile);
+  color: var(--ink3);
+}
+
+.chipBadgeWarn {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+/* Somebody's saved record, as the text it is. Wraps rather than scrolling
+   sideways: a long email address is the thing being looked for. */
+.savedJson {
+  margin: var(--space-md) 0 0;
+  padding: var(--space-md);
+  max-height: 60vh;
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--tile);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ink2);
+}

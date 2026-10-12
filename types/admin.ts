@@ -570,6 +570,81 @@ export type FleetRequestFile = {
   size: number;
 };
 
+// ---- SAVED VERSIONS: THE UNDO FOR CLEARING TEST RECORDS ----
+// A copy of the platform's records, saved ONLY when the Godfather asks, that can be
+// browsed, searched, sorted and put back. Nothing is copied in the background, so a
+// clear or delete leaves no copy behind unless a version was saved first.
+//
+// THE KINDS ARE THE SERVER'S LIST, and every part of the screen is built from it
+// rather than from a list kept here. The server has widened what a version holds
+// once already — from seven kinds to ten — and a kind added after that should show
+// up as a tab, a badge and a count without anybody touching the panel. So `kind` is
+// a plain string throughout, not a union: a union here would be a promise that the
+// list is complete, and it is the server's list, not ours.
+export type SavedKind = { kind: string; label: string };
+
+export type SavedVersion = {
+  id: string;
+  // What the Godfather wrote when saving it. Empty when nothing was.
+  note: string;
+  createdAt: string;
+  // Null once the account that saved it has gone from the server entirely.
+  createdBy: { id: string; name: string } | null;
+  // How many of each kind it holds, and how many of those are MISSING from the live
+  // platform now — i.e. what putting it back would actually restore. Keyed by kind;
+  // read through the kinds list, never assumed to have any particular key.
+  counts: Record<string, number>;
+  missing: Record<string, number>;
+};
+
+export type SavedVersions = {
+  // The most the server keeps. Saving past it is refused and says so.
+  limit: number;
+  kinds: SavedKind[];
+  versions: SavedVersion[];
+};
+
+export type SavedRecord = {
+  // This record's own id INSIDE the version. It is what "put back just this one"
+  // sends — not `recordId`, which is the live record's id.
+  id: string;
+  kind: string;
+  label: string;
+  recordId: string;
+  // One line saying what it was: "BK-1001 · Dana Illidge · …".
+  summary: string;
+  at: string | null;
+  // CENTS, as the server stores it. Everywhere else in this panel money is dollars,
+  // so it is converted once, where it is shown — see savedAmount().
+  amountCents: number | null;
+  // Whether the record is on the live platform now. False means it was deleted
+  // since this version was saved, and putting it back would restore it.
+  inLive: boolean;
+};
+
+export type SavedRecords = { total: number; records: SavedRecord[] };
+
+// One saved record in full, exactly as it was. `data` is the server's own copy of
+// the row and whatever belongs to it, and is only ever shown as text.
+export type SavedRecordInFull = SavedRecord & { data: unknown };
+
+export type RestoreResult = {
+  restored: number;
+  alreadyThere: number;
+  failedCount: number;
+  // A record that could not go back, with the server's own reason, shown as written.
+  // The rest still went.
+  failed: { id: string; kind: string; summary: string; why: string }[];
+  // Sentences about things that went back but not quite as they were: "a person who
+  // ran the business no longer has an account, so they were not linked to it again".
+  notes: string[];
+  byKind: Record<string, { restored: number; alreadyThere: number; failed: number }>;
+  // The server's account of what happened, in a sentence. NOTE: it already ends with
+  // the first few of `notes`, so the panel takes that tail off before showing the
+  // notes as a list under it — otherwise they would be read twice.
+  detail: string;
+};
+
 // ---- A BUSINESS REMOVED ALTOGETHER ----
 // Not closing, which leaves everything in place and can be undone. This takes the
 // business and everything hanging off it off the platform, and the server says

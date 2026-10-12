@@ -354,6 +354,18 @@ export const backendRoutes: { group: string; purpose: string }[] = [
     purpose: 'Removing one test record. Godfather only, with a reason and your code',
   },
 
+  // ---- SAVED VERSIONS, THE UNDO FOR CLEARING TEST RECORDS ----
+  { group: 'GET /admin/backups', purpose: 'The versions that have been saved, and the kinds of record a version holds' },
+  { group: 'POST /admin/backups', purpose: 'Saving a version of the platform now. Godfather only, only when asked' },
+  { group: 'GET /admin/backups/:id', purpose: 'One saved version, with how many of each kind it holds and how many are missing now' },
+  { group: 'GET /admin/backups/:id/records', purpose: 'Searching, filtering and sorting what a version holds, a page at a time' },
+  { group: 'GET /admin/backups/:id/records/:id', purpose: 'One saved record in full, exactly as it was' },
+  {
+    group: 'POST /admin/backups/:id/restore',
+    purpose: 'Putting back what has been deleted since — everything, one kind, or chosen records. Your code, never overwrites',
+  },
+  { group: 'POST /admin/backups/:id/delete', purpose: 'Deleting a saved version. Godfather only, with your code' },
+
   // ---- MESSAGES AND IDENTITY ----
   { group: 'GET /admin/support', purpose: 'Customers waiting for an answer, oldest wait first' },
   { group: 'GET /admin/support/:id', purpose: 'One customer\u2019s whole conversation' },

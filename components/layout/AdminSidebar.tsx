@@ -95,6 +95,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
       { href: '/settings', label: 'Settings', icon: 'settings-outline' },
       { href: '/playbook', label: 'Playbook', icon: 'library-outline' },
       { href: '/test-data', label: 'Test Data', icon: 'construct-outline', godfatherOnly: true },
+      { href: '/saved-versions', label: 'Saved Versions', icon: 'layers-outline', godfatherOnly: true },
     ],
   },
 ];

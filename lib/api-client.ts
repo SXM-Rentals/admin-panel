@@ -38,6 +38,11 @@ import { ApiError } from '@/lib/api/errors';
 import type {
   AdminBooking,
   AdminTier,
+  RestoreResult,
+  SavedRecordInFull,
+  SavedRecords,
+  SavedVersion,
+  SavedVersions,
   ProviderDeleted,
   RecordDeleted,
   TestDataCleared,
@@ -493,6 +498,85 @@ export const apiClient = {
   // platform has run live.
   async clearTestData(what: string, reason: string, code: string): Promise<TestDataCleared> {
     return api.post<TestDataCleared>('/admin/test-data/clear', { body: { what, reason, code } });
+  },
+
+  // ---- SAVED VERSIONS ----
+  // The Godfather's undo for clearing test records. Every address here is
+  // Godfather only; restoring and deleting a version also need the authenticator
+  // code. NONE of it writes an audit entry, and none of it depends on the test-data
+  // window — it keeps working after Stripe has run live, because putting records
+  // back harms nobody.
+  async listVersions(): Promise<SavedVersions> {
+    return api.get<SavedVersions>('/admin/backups');
+  },
+
+  // Saved ONLY when asked. At most `limit` are kept; one more is refused with
+  // `too_many_versions`, and that sentence is shown as written.
+  async saveVersion(note: string): Promise<SavedVersion> {
+    return api.post<SavedVersion>('/admin/backups', { body: note.trim() ? { note: note.trim() } : {} });
+  },
+
+  async getVersion(id: string): Promise<SavedVersion | undefined> {
+    return orNotFound(api.get<SavedVersion>(`/admin/backups/${encodeURIComponent(id)}`));
+  },
+
+  // Searched, filtered and sorted BY THE SERVER, a page at a time — a version can
+  // hold tens of thousands of records, so none of this is done in the browser.
+  async listVersionRecords(
+    id: string,
+    options: {
+      kind?: string;
+      q?: string;
+      show?: 'all' | 'missing';
+      sort?: 'at' | 'summary' | 'amount' | 'kind';
+      dir?: 'asc' | 'desc';
+      limit: number;
+      offset: number;
+    },
+  ): Promise<SavedRecords> {
+    return api.get<SavedRecords>(`/admin/backups/${encodeURIComponent(id)}/records`, {
+      query: {
+        kind: options.kind,
+        q: options.q?.trim() || undefined,
+        show: options.show,
+        sort: options.sort,
+        dir: options.dir,
+        limit: options.limit,
+        offset: options.offset,
+      },
+    });
+  },
+
+  async getVersionRecord(id: string, recordId: string): Promise<SavedRecordInFull | undefined> {
+    return orNotFound(
+      api.get<SavedRecordInFull>(
+        `/admin/backups/${encodeURIComponent(id)}/records/${encodeURIComponent(recordId)}`,
+      ),
+    );
+  },
+
+  // PUTS BACK WHAT IS MISSING AND NOTHING ELSE. It never overwrites a record that is
+  // on the platform now: one that has been edited since stays as it is and is counted
+  // as "already there". With neither `kind` nor `recordIds` it puts back everything
+  // that was deleted, in the order the database needs — customers, businesses, cars,
+  // payouts, bookings and the rest — so after a "Clear everything" one call restores
+  // the lot. `recordIds` are the saved records' own ids (SavedRecord.id).
+  //
+  // The reason is accepted because the panel's dialog asks for one; the server
+  // records nothing.
+  async restoreVersion(
+    id: string,
+    what: { kind?: string; recordIds?: string[] },
+    reason: string,
+    code: string,
+  ): Promise<RestoreResult> {
+    return api.post<RestoreResult>(`/admin/backups/${encodeURIComponent(id)}/restore`, {
+      body: { code, reason, ...(what.kind ? { kind: what.kind } : {}), ...(what.recordIds ? { recordIds: what.recordIds } : {}) },
+    });
+  },
+
+  async deleteVersion(id: string, reason: string, code: string): Promise<void> {
+    await api.post<unknown>(`/admin/backups/${encodeURIComponent(id)}/delete`, { body: { code, reason } });
   },
 
   // ---- REMOVING ONE RECORD ----
