@@ -49,6 +49,7 @@ import { PageCard, PageHead } from '@/components/layout/PageCard';
 import { LoadFailed } from '@/components/layout/LoadFailed';
 import { PartialChange, presentError } from '@/lib/api/errors';
 import { ReasonDialog } from '@/components/admin/ReasonDialog';
+import { CloseAndCancel } from '@/components/admin/CloseAndCancel';
 import { EditableRow } from '@/components/admin/EditableRow';
 import {
   InfoRow,
@@ -142,6 +143,8 @@ export default function ProviderDetailPage() {
   // Which of the three decisions is being confirmed, if any.
   const [stopping, setStopping] = useState(false);
   const [closing, setClosing] = useState(false);
+  // Closing over the top of the rentals still to come. Owner and above.
+  const [closingAnyway, setClosingAnyway] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { showToast } = useToast();
@@ -325,6 +328,19 @@ export default function ProviderDetailPage() {
                       destructive: true,
                       onSelect: () => setClosing(true),
                     },
+                // The way through a refusal, for Owner and above: it cancels what
+                // has not started, refunds it, and closes. Only where there is
+                // something to close.
+                ...(mayDelete && !isClosed
+                  ? [
+                      {
+                        label: 'Close and cancel their rentals',
+                        icon: 'pause-outline' as const,
+                        destructive: true,
+                        onSelect: () => setClosingAnyway(true),
+                      },
+                    ]
+                  : []),
                 ...(mayDelete
                   ? [
                       {
@@ -611,6 +627,14 @@ export default function ProviderDetailPage() {
                       />
                       {mayDelete ? (
                         <Button
+                          label="Close And Cancel Their Rentals"
+                          variant="danger"
+                          size="md"
+                          onClick={() => setClosingAnyway(true)}
+                        />
+                      ) : null}
+                      {mayDelete ? (
+                        <Button
                           label="Delete The Business"
                           variant="danger"
                           size="md"
@@ -767,6 +791,19 @@ export default function ProviderDetailPage() {
           Both ask for the authenticator code as well as a reason, as the server
           does: a session left open on a desk is enough to approve a refund, and
           deliberately not enough to take a business off the site. */}
+      {/* The refusal from plain closing, and the way through it. Mounted always so
+          its own bookings list is only fetched once it is opened. */}
+      <CloseAndCancel
+        open={closingAnyway}
+        onClose={() => setClosingAnyway(false)}
+        provider={{ id: provider.id, businessName: provider.businessName }}
+        onDone={() => {
+          // Closing takes the fleet down too, and cancels rentals: both lists change.
+          refresh();
+          refreshVehicles();
+        }}
+      />
+
       <ReasonDialog
         open={closing}
         onClose={() => setClosing(false)}

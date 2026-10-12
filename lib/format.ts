@@ -126,6 +126,21 @@ export const sideLabels: Record<string, string> = {
   french: 'French side',
 };
 
+// ---- HOW LONG SOMETHING LASTED ----
+// For a staff sign-in: "42 min", "3 h 05 min", "1 d 2 h". Rounded to what a person
+// reads at a glance — nobody wants 11,487 seconds — and never shorter than a minute,
+// because "0 min" reads as though nothing happened, which is not what a session
+// that ended inside the first minute means.
+export function lengthOfTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return 'Unknown';
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h ${String(minutes % 60).padStart(2, '0')} min`;
+  const days = Math.floor(hours / 24);
+  return `${days} d ${hours % 24} h`;
+}
+
 // ---- HOW BIG A FILE IS ----
 // For a spreadsheet or a photo a business sent us. Rounded hard on purpose:
 // whoever is about to download it wants to know "small" or "big", not 1,482,391

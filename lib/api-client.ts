@@ -43,6 +43,7 @@ import type {
   SavedRecords,
   SavedVersion,
   SavedVersions,
+  StaffSessions,
   ProviderDeleted,
   RecordDeleted,
   TestDataCleared,
@@ -223,9 +224,16 @@ export const apiClient = {
   // The server refuses while money is in the air — a rental running, a deposit
   // held, a payout on its way — and names what is in the way. Those sentences
   // reach the person unchanged.
-  async closeProvider(id: string, reason: string, code: string): Promise<AdminProvider> {
+  //
+  // `override` is the Owner-and-above way through a refusal: it cancels every rental
+  // that has not started — each refunded in full, each deposit hold released — and
+  // closes anyway, and a payout still owed no longer stops it (it is sent afterwards).
+  // It STILL refuses while a car is out with a renter, or while a deposit is held on a
+  // finished rental, and it checks both before cancelling anything, so a refusal never
+  // leaves a business half closed. Never sent unless asked for.
+  async closeProvider(id: string, reason: string, code: string, override = false): Promise<AdminProvider> {
     return api.post<AdminProvider>(`/admin/providers/${encodeURIComponent(id)}/close`, {
-      body: { reason, code },
+      body: override ? { reason, code, override: true } : { reason, code },
     });
   },
 
@@ -498,6 +506,41 @@ export const apiClient = {
   // platform has run live.
   async clearTestData(what: string, reason: string, code: string): Promise<TestDataCleared> {
     return api.post<TestDataCleared>('/admin/test-data/clear', { body: { what, reason, code } });
+  },
+
+  // ---- CANCELLING A RENTAL AS SXM RENTALS ----
+  // For when the platform has to step in: a business closing, a car that cannot be
+  // rented, a booking that should never have been made. Owner and above, with a reason
+  // and the authenticator code.
+  //   full  everything the renter paid and has not already had back goes back at once,
+  //         through the same path as an approved refund (so it is audited as one too)
+  //   none  nothing comes back — fraud, say
+  // The deposit hold is released either way: it was never the platform's money.
+  async cancelBooking(id: string, refund: 'full' | 'none', reason: string, code: string): Promise<AdminBooking> {
+    return api.post<AdminBooking>(`/admin/bookings/${encodeURIComponent(id)}/cancel`, {
+      body: { reason, code, refund },
+    });
+  },
+
+  // ---- WHEN STAFF SIGNED IN AND OUT ----
+  // Godfather only, and read only: it writes nothing anywhere. Filtered and paged by the
+  // server, newest sign-in first.
+  async listSignIns(options: {
+    staffId?: string;
+    tier?: AdminTier;
+    status?: 'active' | 'ended';
+    limit: number;
+    offset: number;
+  }): Promise<StaffSessions> {
+    return api.get<StaffSessions>('/admin/sessions', {
+      query: {
+        staffId: options.staffId,
+        tier: options.tier,
+        status: options.status,
+        limit: options.limit,
+        offset: options.offset,
+      },
+    });
   },
 
   // ---- SAVED VERSIONS ----

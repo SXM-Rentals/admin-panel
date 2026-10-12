@@ -570,6 +570,33 @@ export type FleetRequestFile = {
   size: number;
 };
 
+// ---- WHEN STAFF SIGNED IN AND OUT ----
+// One row per sign-in, read from the records the server already keeps — nothing new is
+// recorded for this. A sign-in counts once the authenticator code has been given; a
+// session that stopped at the password step is not one.
+export type StaffSession = {
+  id: string;
+  staff: { id: string; name: string; email: string; tier: AdminTier };
+  signedInAt: string;
+  // Null while it is still open.
+  endedAt: string | null;
+  // HOW IT ENDED, which is not the same as whether it did:
+  //   signed_out  somebody ended it — the member of staff signing out, or an
+  //               administrator resetting or switching off their account
+  //   timed_out   half an hour without use, or eight hours since it began
+  //   active      still open now
+  status: 'active' | 'signed_out' | 'timed_out';
+  lastSeenAt: string;
+  // From sign-in to its end, or to now while it is open.
+  durationSeconds: number;
+  ipAddress: string | null;
+  // The browser's own description of itself, cut short. It is whatever the browser
+  // chose to say, so it is shown as text and nothing more.
+  device: string | null;
+};
+
+export type StaffSessions = { total: number; sessions: StaffSession[] };
+
 // ---- SAVED VERSIONS: THE UNDO FOR CLEARING TEST RECORDS ----
 // A copy of the platform's records, saved ONLY when the Godfather asks, that can be
 // browsed, searched, sorted and put back. Nothing is copied in the background, so a

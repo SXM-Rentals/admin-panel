@@ -354,6 +354,9 @@ export const backendRoutes: { group: string; purpose: string }[] = [
     purpose: 'Removing one test record. Godfather only, with a reason and your code',
   },
 
+  { group: 'POST /admin/bookings/:id/cancel', purpose: 'Cancelling a rental as SXM Rentals, with or without a refund. Owner access and your code' },
+  { group: 'GET /admin/sessions', purpose: 'When each member of staff signed in and out, and how it ended. Godfather only' },
+
   // ---- SAVED VERSIONS, THE UNDO FOR CLEARING TEST RECORDS ----
   { group: 'GET /admin/backups', purpose: 'The versions that have been saved, and the kinds of record a version holds' },
   { group: 'POST /admin/backups', purpose: 'Saving a version of the platform now. Godfather only, only when asked' },

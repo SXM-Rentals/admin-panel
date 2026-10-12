@@ -19,6 +19,7 @@
 
 import React from 'react';
 import { BookingSignature } from '@/components/admin/BookingSignature';
+import { CancelRental } from '@/components/admin/CancelRental';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { useAsyncData } from '@/hooks/useAsyncData';
@@ -215,6 +216,12 @@ export default function BookingDetailPage() {
         </div>
 
         <div className={styles.detailStack}>
+          {/* ---- STEPPING IN ---- First in this column, and only for a rental that
+              can still be cancelled: it is the thing somebody has opened a booking
+              in order to do, and a card that said nothing about a finished one
+              would be noise. */}
+          <CancelRental booking={booking} onDone={refresh} />
+
           <PageCard title="Customer">
             <InfoRows>
               <InfoRow label="Name" value={booking.customerName} />
