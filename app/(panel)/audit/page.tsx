@@ -203,11 +203,6 @@ export default function AuditLogPage() {
               id={e.id}
               label={`the audit entry “${auditActionLabel(e.action)}” for ${e.subjectLabel}`}
               onDone={refresh}
-            unavailable={
-              (e.action === 'test_records_cleared' || (e.action as string) === 'audit_entry_deleted')
-              ? 'This entry is the note of a clearing. It goes only when the whole log is cleared.'
-              : undefined
-            }
             />
           )}
           loading={loading}
@@ -228,7 +223,7 @@ export default function AuditLogPage() {
           <ResetControl
             what="audit_log"
             label="the audit log"
-            detail="The record of what staff did — except one entry saying you cleared it, when and why."
+            detail="The whole record of what staff did."
           />
           <ResetNote />
         </PageCard>

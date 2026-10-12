@@ -18,12 +18,13 @@
 // spent here rather than on any of the others — put it on all of them and people
 // learn to type it without reading.
 //
-// WHAT SURVIVES, NOW THAT THE AUDIT LOG DOES NOT. Staff accounts and the platform
-// settings are never cleared by any of this. The audit log used to be on that list
-// and no longer is: it goes with its own clear or with Everything, and always
-// keeps one entry saying who cleared it, when, how many and why. That entry is the
-// point — a log that can vanish without trace is not a log, and one that leaves a
-// note of its own clearing still is.
+// WHAT SURVIVES, AND WHAT DOES NOT. Staff accounts and the platform settings are
+// never cleared by any of this. Everything else can go, the audit log included, and
+// when the Godfather clears or deletes anything NOTHING IS LEFT BEHIND — no note, no
+// log entry saying it happened. That is the owner's decision and the whole point of
+// the account being the Godfather's: it is the one account that answers to nobody
+// for what it does to test data, so it does not leave a trail for anybody else to
+// read either.
 //
 // WINDING BACK TO A DAY IS NOT HERE, AND THAT IS AN ANSWER RATHER THAN AN
 // OMISSION. It was asked for; the backend's reply was that it is a database
@@ -60,7 +61,7 @@ const SAYS: Record<string, string> = {
   notifications: 'Everything the apps have pushed to anybody.',
   support: 'Conversations between customers and us.',
   fleet_requests: 'Businesses that asked us to put their cars on for them, and the files they sent.',
-  audit_log: 'The record of what staff did — except one entry saying it was cleared, by whom and why.',
+  audit_log: 'The whole record of what staff did.',
 };
 
 export default function TestDataPage() {
@@ -160,8 +161,7 @@ export default function TestDataPage() {
             <Note icon="warning-outline" tone="ink2">
               This clears every kind of record on this screen at once — bookings, money, cars,
               businesses, customers, messages and the audit log — and tells you how many of each
-              went. Staff accounts and the platform settings stay, and the audit log keeps one entry
-              saying you did this. Nothing else survives it, and nobody can undo it.
+              went. Only staff accounts and the platform settings stay, and nobody can undo it.
             </Note>
             <div style={{ marginTop: 'var(--space-md)' }}>
               <ResetControl
@@ -223,10 +223,8 @@ export default function TestDataPage() {
             </Note>
             <div style={{ marginTop: 'var(--space-md)' }}>
               <Note icon="warning-outline" tone="ink2">
-                The audit log is no longer on that list. It goes with its own clear or with
-                Everything — but it always keeps one entry saying who cleared it, when, how many
-                went and why. A log that can vanish without trace would not be a log; one that
-                leaves a note of its own clearing still is.
+                The audit log is not on that list: as the Godfather you can clear all of it, or
+                delete a single entry. It cannot be undone.
               </Note>
             </div>
           </PageCard>

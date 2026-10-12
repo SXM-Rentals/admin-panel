@@ -13,10 +13,11 @@
 // THE PARTICULAR ONES. First, the button lights up only when the server says it can
 // delete a single record of that kind — until then it is greyed with the reason,
 // rather than offered and failed after somebody has typed a reason and a code.
-// Second, the audit log: removing one entry leaves a note in its place, the dialog
-// says so, and the entry that IS the note of a clearing cannot be removed at all,
-// because deleting the note would leave the log with no memory of having been
-// tampered with.
+// Second, no entry is protected from the Godfather, the audit log's own included:
+// the owner's decision, and the reason the account is the Godfather. Every audit
+// entry can be deleted — even the one recording an earlier clearing — and the
+// dialog makes no promise either way about what is left, because the owner asked
+// for it not to say anything.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -203,7 +204,7 @@ describe('deleting one record', () => {
 });
 
 describe('deleting one audit entry', () => {
-  it('says a note takes its place, so the log still shows it was tampered with', async () => {
+  it('does not promise a note will take its place', async () => {
     const user = userEvent.setup();
     serve({
       '/admin/me': me('godfather'),
@@ -216,10 +217,12 @@ describe('deleting one audit entry', () => {
     await waitFor(() => expect(button).toBeEnabled());
     await user.click(button);
 
-    expect(await screen.findByRole('dialog')).toHaveTextContent(/A note takes its place/i);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).not.toHaveTextContent(/note takes its place/i);
+    expect(dialog).not.toHaveTextContent(/left behind/i);
   });
 
-  it('will not offer to delete the note of a clearing', async () => {
+  it('lets the Godfather delete even the entry that records an earlier clearing', async () => {
     serve({
       '/admin/me': me('godfather'),
       '/admin/test-data/status': CAN,
@@ -227,10 +230,9 @@ describe('deleting one audit entry', () => {
     });
     render(<AuditPage />);
 
+    // No entry is protected from the Godfather, the notes of past clearings
+    // included: that is the owner's decision, not an oversight.
     const button = await screen.findByRole('button', { name: /^delete$/i });
-    await waitFor(() => expect(button).toBeDisabled());
-    // Deleting the note would leave the log with no memory of having been
-    // tampered with, which is the one thing it must not lose.
-    expect(button).toHaveAttribute('title', expect.stringMatching(/note of a clearing/i));
+    await waitFor(() => expect(button).toBeEnabled());
   });
 });

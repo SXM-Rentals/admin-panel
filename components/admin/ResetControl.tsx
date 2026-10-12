@@ -101,11 +101,7 @@ export function ResetControl({
         open={asking}
         onClose={() => setAsking(false)}
         title={`Clear ${label}`}
-        description={`${detail} This destroys those records rather than hiding them, and there is no undoing it from the panel. ${
-          what === 'audit_log' || what === 'everything'
-            ? 'The audit log goes with it — all but one entry, which says that you cleared it, when, how many went and why.'
-            : 'Everything else stays, including the audit log, where this clearance appears under your name.'
-        }`}
+        description={`${detail} This destroys those records rather than hiding them, and there is no undoing it from the panel.`}
         confirmLabel={`Clear ${label}`}
         destructive
         confirmWithCode

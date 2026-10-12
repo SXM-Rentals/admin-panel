@@ -19,12 +19,11 @@
 // then failing after somebody has typed a reason and a six-digit code. When the
 // server learns a kind, the button works with no change here.
 //
-// A DELETED AUDIT ENTRY LEAVES A NOTE, and the dialog says so. The audit log is the
-// one place where "gone without trace" defeats the purpose of the thing, so
-// removing a single entry replaces it with one saying it was removed — by whom,
-// when and why — exactly as clearing the whole log keeps one. The entry that is
-// itself the note of a clearing is not offered for deletion at all, because
-// deleting the note would leave the log with no memory of having been tampered with.
+// NOTHING IS LEFT BEHIND, AND THAT IS DELIBERATE. Not a note, not a log entry, and
+// that goes for the audit log's own entries as much as for a booking: the Godfather
+// can delete any of them, including the entry that records an earlier clearing. It
+// is the owner's decision and the reason the account exists — it is the one account
+// that answers to nobody for what it does to test data.
 
 import React, { useState } from 'react';
 import { apiClient } from '@/lib/api-client';
@@ -79,8 +78,6 @@ export function RowDelete({
         ? 'SXM Rentals does not offer deleting a single one of these yet.'
         : undefined);
 
-  const isAudit = what === 'audit_log';
-
   return (
     <>
       <Button
@@ -96,11 +93,7 @@ export function RowDelete({
         open={asking}
         onClose={() => setAsking(false)}
         title={`Delete ${label}`}
-        description={`This removes ${label} and nothing else. It is destroyed rather than hidden, and nobody can undo it from the panel.${
-          isAudit
-            ? ' A note takes its place saying an entry was removed — by you, when, and why — so the log still shows that it was tampered with.'
-            : ' The audit log records that you did this, under your name.'
-        }`}
+        description={`This removes ${label} and nothing else. It is destroyed rather than hidden, and nobody can undo it from the panel.`}
         confirmLabel="Delete it"
         destructive
         confirmWithCode
@@ -109,7 +102,7 @@ export function RowDelete({
           subjectLabel: label,
           field: 'Record',
           before: 'On the platform',
-          after: isAudit ? 'Replaced by a note that it was removed' : 'Deleted',
+          after: 'Deleted',
         }}
         onConfirm={async (reason, { code }) => {
           try {

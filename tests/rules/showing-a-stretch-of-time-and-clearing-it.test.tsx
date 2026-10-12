@@ -414,12 +414,15 @@ describe('clearing test records', () => {
     expect(await screen.findByText(/bookings 31/)).toBeInTheDocument();
   });
 
-  it('says the audit log goes too, where it does', async () => {
+  it('does not promise a surviving entry when the audit log is cleared', async () => {
     const user = userEvent.setup();
     serve({ '/admin/me': me('godfather'), '/admin/test-data/status': OPEN });
     render(<TestDataPage />);
 
     await clearTheRowFor(user, /clear audit log/i);
-    expect(screen.getByRole('dialog')).toHaveTextContent(/all but one entry/i);
+    // No promise of a surviving entry, and no claim about what is left either.
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).not.toHaveTextContent(/all but one entry/i);
+    expect(dialog).not.toHaveTextContent(/left behind/i);
   });
 });
