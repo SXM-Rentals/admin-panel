@@ -59,7 +59,7 @@ import {
   VerificationPill,
   YesNo,
 } from '@/components/admin/shared';
-import { ActionMenu, Button, Icon, Skeleton, StatusPill, Text } from '@/components/ui';
+import { ActionMenu, Button, Icon, Skeleton, StatusPill, Text, useToast } from '@/components/ui';
 import type { ProviderField } from '@/types';
 import styles from '@/components/admin/admin.module.css';
 
@@ -144,6 +144,10 @@ export default function ProviderDetailPage() {
   const [closing, setClosing] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { showToast } = useToast();
+  // True while the Godfather's immediate delete is in flight, so a second click
+  // cannot send a second one.
+  const [removing, setRemoving] = useState(false);
   // What the server said it removed, kept so the screen can repeat it on the way
   // out rather than saying "done" about something this large.
   const [goneFor, setGoneFor] = useState<string | undefined>(undefined);
@@ -206,7 +210,11 @@ export default function ProviderDetailPage() {
     if (asked === 'reopen' && isClosed) setReopening(true);
     // Owner and above only, like the button itself: a link cannot be used to
     // open a dialog the person would not have been offered.
-    if (asked === 'delete' && whyNeedsTier(me?.tier, 'owner') === undefined) setDeleting(true);
+    // The Godfather deletes immediately from the button, so a link never needs to
+    // open anything for them — and a link must never be able to delete.
+    if (asked === 'delete' && whyNeedsTier(me?.tier, 'owner') === undefined && me?.tier !== 'godfather') {
+      setDeleting(true);
+    }
     router.replace(`/providers/${provider.id}`);
   }, [asked, provider, fleetLoading, canStopTrading, isClosed, router]);
 
@@ -230,6 +238,30 @@ export default function ProviderDetailPage() {
   // everybody else: unlike closing, there is nothing an Administrator can usefully
   // do with the knowledge that this button exists.
   const mayDelete = whyNeedsTier(me?.tier, 'owner') === undefined;
+
+  // THE GODFATHER DELETES IMMEDIATELY: no dialog, no reason, no code, and no
+  // refusal for a business that has history. Everybody else with this button goes
+  // through the dialog as before. The owner's decision — he built it, so it is his
+  // to do as he pleases.
+  const isGodfather = me?.tier === 'godfather';
+
+  const startDelete = async () => {
+    if (!isGodfather) {
+      setDeleting(true);
+      return;
+    }
+    if (removing) return;
+    setRemoving(true);
+    try {
+      const result = await apiClient.deleteProviderNow(provider.id);
+      // The server's own account of what went, shown as written.
+      showToast('Business deleted.', result.detail);
+      router.push('/providers');
+    } catch (caught) {
+      setRemoving(false);
+      showToast('Not deleted.', presentError(caught));
+    }
+  };
 
   // Every detail row needs the same four things.
   const rowProps = {
@@ -299,7 +331,7 @@ export default function ProviderDetailPage() {
                         label: 'Delete the business',
                         icon: 'trash-outline' as const,
                         destructive: true,
-                        onSelect: () => setDeleting(true),
+                        onSelect: () => void startDelete(),
                       },
                     ]
                   : []),
@@ -582,7 +614,9 @@ export default function ProviderDetailPage() {
                           label="Delete The Business"
                           variant="danger"
                           size="md"
-                          onClick={() => setDeleting(true)}
+                          loading={removing}
+                          disabled={removing}
+                          onClick={() => void startDelete()}
                         />
                       ) : null}
                     </div>
@@ -590,10 +624,9 @@ export default function ProviderDetailPage() {
                     {mayDelete ? (
                       <div style={{ marginTop: 'var(--space-md)' }}>
                         <Note icon="warning-outline" tone="ink2">
-                          Deleting is not closing. It takes the business, its cars and everything
-                          behind them off the platform, and nobody can undo it — not even from the
-                          database. SXM Rentals refuses it outright where there is real trading
-                          behind the business, and will say so.
+                          {isGodfather
+                            ? 'Deleting is not closing. As the Godfather this goes straight through — no reason, no code, and no refusal for a business with history — and it takes the business, its cars and everything behind them. It cannot be undone.'
+                            : 'Deleting is not closing. It takes the business, its cars and everything behind them off the platform, and nobody can undo it — not even from the database. SXM Rentals refuses it outright where there is real trading behind the business, and will say so.'}
                         </Note>
                       </div>
                     ) : null}

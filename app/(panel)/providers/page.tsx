@@ -16,6 +16,7 @@
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
+import { presentError } from '@/lib/api/errors';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { money } from '@/lib/format';
 import { useAdminSession } from '@/lib/auth';
@@ -25,7 +26,7 @@ import { LoadFailed } from '@/components/layout/LoadFailed';
 import { DataTable, CellStack, type Column } from '@/components/tables/DataTable';
 import { FilterBar, FilterChips } from '@/components/admin/FilterBar';
 import { VerificationPill } from '@/components/admin/shared';
-import { ActionMenu, Button, StatusPill, Text } from '@/components/ui';
+import { ActionMenu, Button, StatusPill, Text, useToast } from '@/components/ui';
 import type { AdminProvider, VerificationStatus } from '@/types';
 
 type StatusFilter = 'all' | VerificationStatus;
@@ -34,12 +35,28 @@ type SideFilter = 'all' | 'dutch' | 'french';
 export default function ProvidersPage() {
   const { staff: me } = useAdminSession();
   const mayDelete = whyNeedsTier(me?.tier, 'owner') === undefined;
+  const isGodfather = me?.tier === 'godfather';
+  const { showToast } = useToast();
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [side, setSide] = useState<SideFilter>('all');
 
   const { data: providers, loading, error, refresh } = useAsyncData(() => apiClient.listProviders(), []);
+
+  // The Godfather deletes straight from the list, with nothing opened first: no
+  // dialog, no reason, no code. Deliberately not a link to the business with a
+  // delete flag on it — a link that deletes when it is visited could be triggered
+  // by a refresh, a back button or a prefetch. Only a click on this item does it.
+  const deleteNow = async (id: string) => {
+    try {
+      const result = await apiClient.deleteProviderNow(id);
+      showToast('Business deleted.', result.detail);
+      refresh();
+    } catch (caught) {
+      showToast('Not deleted.', presentError(caught));
+    }
+  };
 
   const rows = useMemo(() => {
     const all = providers ?? [];
@@ -230,15 +247,17 @@ export default function ProvidersPage() {
                         onSelect: () => router.push(`/providers/${p.id}?close=1`),
                       },
                   // Removing it altogether is a third thing, not a heavier close:
-                  // Owner and above, hidden for everybody else, and opened on the
-                  // business itself so the fleet it would take is in front of you.
+                  // Owner and above, hidden for everybody else. An Owner is taken to
+                  // the business so the fleet it would take is in front of them; the
+                  // Godfather deletes on the spot.
                   ...(mayDelete
                     ? [
                         {
                           label: 'Delete the business',
                           icon: 'trash-outline' as const,
                           destructive: true,
-                          onSelect: () => router.push(`/providers/${p.id}?delete=1`),
+                          onSelect: () =>
+                            isGodfather ? void deleteNow(p.id) : router.push(`/providers/${p.id}?delete=1`),
                         },
                       ]
                     : []),

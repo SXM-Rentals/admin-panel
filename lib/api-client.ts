@@ -464,6 +464,17 @@ export const apiClient = {
     });
   },
 
+  // THE GODFATHER'S VERSION: NO REASON, NO CODE, NO REFUSAL. The same address with
+  // nothing in the body. For the Godfather the server removes the business and
+  // everything behind it straight away, whatever history it has — the `has_history`
+  // refusal that protects an Owner's click does not apply, because this is the one
+  // account that answers to nobody for what it does. The owner's decision.
+  //
+  // Not offered to anybody else; the server would refuse an Owner who sent it.
+  async deleteProviderNow(id: string): Promise<ProviderDeleted> {
+    return api.post<ProviderDeleted>(`/admin/providers/${encodeURIComponent(id)}/delete`);
+  },
+
   // ---- CLEARING TEST RECORDS ----
   // Whether any of this is still possible, and which conditions are keeping it so.
   // Cached for the panel by lib/test-data.ts: eight controls across six screens
